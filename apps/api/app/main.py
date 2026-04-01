@@ -1,22 +1,33 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
+from app.api.routes.ingestion import router as ingestion_router
 from app.api.routes.reviews import router as reviews_router
+from app.core.config import get_settings
 from app.core.logging import configure_logging
 
 
 def create_app() -> FastAPI:
     configure_logging()
+    settings = get_settings()
 
     app = FastAPI(
         title="WorkRule AI API",
         version="0.1.0",
         description="Structured employment rules review backend",
     )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.include_router(health_router)
+    app.include_router(ingestion_router)
     app.include_router(reviews_router)
     return app
 
 
 app = create_app()
-

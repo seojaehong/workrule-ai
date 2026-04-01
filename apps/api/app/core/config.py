@@ -11,12 +11,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    openai_api_key: SecretStr
+    openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-4o-mini"
     openai_max_retries: int = 3
+    cors_origins: list[str] = ["http://127.0.0.1:3000", "http://localhost:3000"]
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()
-
