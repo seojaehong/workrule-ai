@@ -54,6 +54,9 @@ Copy-Item .env.example .env
 uvicorn app.main:app --reload
 ```
 
+기본값은 `LLM_MODE=mock` 이므로 OpenAI 키 없이도 진단 플로우를 눌러볼 수 있습니다.
+실제 모델로 전환하려면 `apps/api/.env` 에서 `LLM_MODE=openai` 로 바꾸고 `OPENAI_API_KEY` 를 넣으면 됩니다.
+
 ### 2. Web
 
 ```powershell
@@ -62,6 +65,20 @@ Copy-Item .env.local.example .env.local
 npm.cmd install
 npm.cmd run dev
 ```
+
+## Quick test
+
+루트에서 아래 두 명령만 실행하면 됩니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1
+```
+
+- 브라우저 확인: `http://127.0.0.1:3000`
+- 종료: `powershell -ExecutionPolicy Bypass -File .\scripts\stop-local.ps1`
+- 로그: `evaluation/local-run/`
+- 스모크 테스트 보고서: `evaluation/local-smoke/report.json`
 
 ## Validation flow
 

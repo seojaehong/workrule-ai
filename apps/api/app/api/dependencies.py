@@ -4,6 +4,7 @@ from fastapi import HTTPException
 
 from app.core.config import Settings, get_settings
 from app.services.llm.base import LLMGateway
+from app.services.llm.mock_gateway import MockReviewGateway
 from app.services.llm.openai_gateway import OpenAIResponsesGateway
 from app.services.review_service import ReviewService
 
@@ -11,6 +12,8 @@ from app.services.review_service import ReviewService
 @lru_cache(maxsize=1)
 def get_llm_gateway() -> LLMGateway:
     settings = get_settings()
+    if settings.llm_mode == "mock":
+        return MockReviewGateway()
     if settings.openai_api_key is None:
         raise HTTPException(
             status_code=503,

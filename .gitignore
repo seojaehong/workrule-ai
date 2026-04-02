@@ -12,3 +12,5 @@ build/
 .next/
 node_modules/
 coverage/
+evaluation/local-run/
+evaluation/local-smoke/sample-upload.txt
