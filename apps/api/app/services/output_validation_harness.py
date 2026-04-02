@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Generic, TypeVar
+from typing import Callable, Generic, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
@@ -27,11 +27,13 @@ class OutputValidationHarness(Generic[ModelT]):
         response_model: type[ModelT],
         schema_name: str,
         max_retries: int = 3,
+        payload_repair: Callable[[dict[str, object]], dict[str, object]] | None = None,
     ) -> None:
         self._gateway = gateway
         self._response_model = response_model
         self._schema_name = schema_name
         self._max_retries = max_retries
+        self._payload_repair = payload_repair
 
     async def run(self, messages: list[LLMMessage]) -> ModelT:
         attempt_messages = list(messages)
@@ -47,7 +49,10 @@ class OutputValidationHarness(Generic[ModelT]):
             last_raw_text = generation.raw_text
 
             try:
-                return self._response_model.model_validate(generation.payload)
+                payload = generation.payload
+                if self._payload_repair is not None:
+                    payload = self._payload_repair(payload)
+                return self._response_model.model_validate(payload)
             except ValidationError as exc:
                 last_error = exc.json()
                 logger.warning("LLM output validation failed on attempt %s: %s", attempt, last_error)
@@ -90,4 +95,3 @@ class OutputValidationHarness(Generic[ModelT]):
 [검증 오류]
 {error_json}
 """.strip()
-

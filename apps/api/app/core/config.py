@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     ingestion_ocr_timeout_seconds: float = 120.0
     ingestion_ocr_output_format: Literal["markdown", "text", "html"] = "markdown"
     cors_origins: list[str] = ["http://127.0.0.1:3000", "http://localhost:3000"]
-    llm_mode: Literal["mock", "openai"] = "mock"
+    upstage_model: str = "solar-pro2"
+    llm_mode: Literal["mock", "openai", "upstage"] = "mock"
 
     def has_openai_api_key(self) -> bool:
         if self.openai_api_key is None:

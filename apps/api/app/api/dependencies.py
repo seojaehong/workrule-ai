@@ -8,6 +8,7 @@ from app.services.ingestion.ocr_service import OCRService, OpenAIVisionOCRServic
 from app.services.llm.base import LLMGateway
 from app.services.llm.mock_gateway import MockReviewGateway
 from app.services.llm.openai_gateway import OpenAIResponsesGateway
+from app.services.llm.upstage_gateway import UpstageChatCompletionsGateway
 from app.services.review_service import ReviewService
 
 
@@ -16,6 +17,16 @@ def get_llm_gateway() -> LLMGateway:
     settings = get_settings()
     if settings.llm_mode == "mock":
         return MockReviewGateway()
+    if settings.llm_mode == "upstage":
+        if not settings.has_upstage_api_key():
+            raise HTTPException(
+                status_code=503,
+                detail="UPSTAGE_API_KEY is not configured. Set it in apps/api/.env before live diagnosis.",
+            )
+        return UpstageChatCompletionsGateway(
+            api_key=settings.upstage_api_key,
+            model=settings.upstage_model,
+        )
     if not settings.has_openai_api_key():
         raise HTTPException(
             status_code=503,
