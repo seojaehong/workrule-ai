@@ -1,6 +1,8 @@
 from io import BytesIO
+from zipfile import ZipFile
 
 import pytest
+from fastapi import HTTPException
 from fastapi import UploadFile
 
 from app.services.ingestion.document_ingestion_service import DocumentIngestionService
@@ -27,3 +29,75 @@ async def test_document_ingestion_service_extracts_plain_text() -> None:
 
     assert extracted.parser == "plain_text"
     assert extracted.normalized_text == "제1조 목적\n회사는 규칙을 둔다."
+
+
+def test_document_ingestion_service_prefers_hwpx_preview_text() -> None:
+    service = DocumentIngestionService()
+    archive_buffer = BytesIO()
+
+    with ZipFile(archive_buffer, mode="w") as archive:
+        archive.writestr("Preview/PrvText.txt", "표준 취업규칙\n제1조 목적".encode("utf-8"))
+        archive.writestr(
+            "Contents/section0.xml",
+            '<?xml version="1.0" encoding="UTF-8"?><root><p>무시될 본문</p></root>',
+        )
+
+    extracted = service._extract_hwpx_text(archive_buffer.getvalue())
+
+    assert extracted == "표준 취업규칙\n제1조 목적"
+
+
+def test_document_ingestion_service_detects_image_only_pdf() -> None:
+    service = DocumentIngestionService()
+
+    class EmptyPage:
+        def extract_text(self) -> str:
+            return ""
+
+    class EmptyReader:
+        pages = [EmptyPage()]
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr("app.services.ingestion.document_ingestion_service.PdfReader", lambda _: EmptyReader())
+
+        with pytest.raises(HTTPException) as error:
+            service._extract_pdf_text(b"%PDF-1.4")
+
+    assert error.value.status_code == 422
+    assert "image-only scanned" in str(error.value.detail)
+
+
+def test_document_ingestion_service_prefers_hwp_preview_text() -> None:
+    service = DocumentIngestionService()
+    preview_bytes = "표준 취업규칙\n제1조 목적".encode("utf-16le")
+
+    class FakeStream:
+        def __init__(self, data: bytes) -> None:
+            self._data = data
+
+        def read(self) -> bytes:
+            return self._data
+
+    class FakeOleFile:
+        def __enter__(self) -> "FakeOleFile":
+            return self
+
+        def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+            return None
+
+        def exists(self, name: str) -> bool:
+            return name == "PrvText"
+
+        def openstream(self, name: str) -> FakeStream:
+            if name != "PrvText":
+                raise KeyError(name)
+            return FakeStream(preview_bytes)
+
+        def listdir(self, streams: bool = True, storages: bool = False) -> list[list[str]]:
+            return []
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr("app.services.ingestion.document_ingestion_service.olefile.OleFileIO", lambda _: FakeOleFile())
+        extracted = service._extract_hwp_text(b"fake-hwp")
+
+    assert extracted == "표준 취업규칙\n제1조 목적"

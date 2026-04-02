@@ -1,13 +1,7 @@
-﻿{
-    "ingestion_parser":  "plain_text",
-    "ingestion_char_count":  43,
-    "diagnosis_company":  "????????? ??????",
-    "elapsed_seconds":  0,
-    "api_health":  {
-                       "status":  "ok"
-                   },
-    "checked_at":  "2026-04-02T09:00:55+09:00",
-    "web_status_code":  200,
-    "diagnosis_total_findings":  1,
-    "ingestion_filename":  "sample-upload.txt"
+{
+  "checked_at": "2026-04-02",
+  "files_checked": 4,
+  "success_count": 3,
+  "failure_count": 1,
+  "elapsed_note": "See extraction-regression-20260402.json for per-file details."
 }
