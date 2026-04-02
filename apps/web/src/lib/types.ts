@@ -90,3 +90,18 @@ export interface ExtractedDocument {
   char_count: number;
   line_count: number;
 }
+
+export interface DraftGenerationRequest {
+  company_name: string;
+  baseline_rule_text: string;
+  diagnosis_result: ReviewDiagnosisResult;
+}
+
+export interface DraftGenerationResult {
+  company_name: string;
+  draft_title: string;
+  draft_markdown: string;
+  applied_replacements: number;
+  inserted_clauses: number;
+  unresolved_findings: string[];
+}

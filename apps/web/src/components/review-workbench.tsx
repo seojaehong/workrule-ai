@@ -9,6 +9,7 @@ import {
   STANDARD_RULE_SNIPPET,
 } from "@/lib/demo-data";
 import type {
+  DraftGenerationRequest,
   ExtractedDocument,
   ReviewDiagnosisRequest,
   ReviewDiagnosisResult,
@@ -73,6 +74,7 @@ export function ReviewWorkbench() {
   const [uploadingField, setUploadingField] = useState<
     "company_rule_text" | "standard_rule_text" | null
   >(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const deferredCurrentRule = useDeferredValue(form.company_rule_text);
@@ -231,6 +233,56 @@ export function ReviewWorkbench() {
       setErrorMessage(message);
     } finally {
       setUploadingField(null);
+    }
+  }
+
+  async function handleExportHwpx() {
+    if (!currentResult) {
+      return;
+    }
+
+    setIsExporting(true);
+    setErrorMessage(null);
+
+    try {
+      const payload: DraftGenerationRequest = {
+        company_name: form.company_name,
+        baseline_rule_text: form.company_rule_text,
+        diagnosis_result: currentResult,
+      };
+
+      const response = await fetch("/api/export-hwpx", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const maybeError = (await response.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(maybeError?.detail ?? "HWPX 내보내기에 실패했습니다.");
+      }
+
+      const blob = await response.blob();
+      const filename =
+        response.headers
+          .get("Content-Disposition")
+          ?.match(/filename\*=UTF-8''(.+)$/)?.[1]
+          ?.replaceAll("%20", " ") ?? "latest-workrule-draft.hwpx";
+
+      const href = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = decodeURIComponent(filename);
+      link.click();
+      URL.revokeObjectURL(href);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "내보내기 중 알 수 없는 오류가 발생했습니다.";
+      setErrorMessage(message);
+    } finally {
+      setIsExporting(false);
     }
   }
 
@@ -574,7 +626,17 @@ export function ReviewWorkbench() {
                 </div>
 
                 <section>
-                  <SectionHeader title="개정 초안 섹션" meta={`${generatedDraftSections.length} items`} />
+                  <div className="flex items-center justify-between gap-3">
+                    <SectionHeader title="개정 초안 섹션" meta={`${generatedDraftSections.length} items`} />
+                    <button
+                      type="button"
+                      onClick={handleExportHwpx}
+                      disabled={isExporting}
+                      className="rounded-full border border-[color:var(--line)] px-4 py-2 text-xs font-semibold transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isExporting ? "HWPX 생성 중..." : "HWPX 다운로드"}
+                    </button>
+                  </div>
                   <div className="mt-3 space-y-3">
                     {generatedDraftSections.map((section) => (
                       <article
@@ -680,7 +742,7 @@ function UploadAction({
         {isLoading ? "추출 중..." : "파일 업로드"}
         <input
           type="file"
-          accept=".txt,.md,.docx,.pdf,.hwpx"
+          accept=".txt,.md,.docx,.pdf,.hwpx,.hwp"
           className="hidden"
           disabled={isLoading}
           onChange={(event) => {

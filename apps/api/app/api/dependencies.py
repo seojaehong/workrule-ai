@@ -3,6 +3,8 @@ from functools import lru_cache
 from fastapi import HTTPException
 
 from app.core.config import Settings, get_settings
+from app.services.draft_document_service import DraftDocumentService
+from app.services.hwpx_export_service import HWPXExportService
 from app.services.ingestion.document_ingestion_service import DocumentIngestionService
 from app.services.ingestion.ocr_service import OCRService, OpenAIVisionOCRService, UpstageDocumentParseService
 from app.services.llm.base import LLMGateway
@@ -73,3 +75,17 @@ def get_review_service() -> ReviewService:
         gateway=get_llm_gateway(),
         max_retries=settings.openai_max_retries,
     )
+
+
+def get_draft_document_service() -> DraftDocumentService:
+    return DraftDocumentService()
+
+
+def get_hwpx_export_service() -> HWPXExportService:
+    settings = get_settings()
+    if not settings.hwpx_template_path:
+        raise HTTPException(
+            status_code=503,
+            detail="HWPX_TEMPLATE_PATH is not configured. Set it in apps/api/.env before exporting.",
+        )
+    return HWPXExportService(template_path=settings.hwpx_template_path)

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://127.0.0.1:3000", "http://localhost:3000"]
     upstage_model: str = "solar-pro2"
     llm_mode: Literal["mock", "openai", "upstage"] = "mock"
+    hwpx_template_path: str = ""
 
     def has_openai_api_key(self) -> bool:
         if self.openai_api_key is None:
