@@ -1,4 +1,5 @@
 from io import BytesIO
+import logging
 import os
 import xml.etree.ElementTree as ET
 import zlib
@@ -11,6 +12,10 @@ from pypdf import PdfReader
 
 from app.domain.schemas.ingestion import ExtractedDocument
 from app.services.ingestion.text_normalizer import normalize_extracted_text
+from app.services.ingestion.vision_ocr_service import VisionOCRService
+
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentIngestionService:
@@ -18,12 +23,19 @@ class DocumentIngestionService:
     _hwp_paragraph_text_tag = 67
     _hwpx_preview_entry = "Preview/PrvText.txt"
 
+    def __init__(self, *, ocr_service: VisionOCRService | None = None) -> None:
+        self._ocr_service = ocr_service
+
     async def extract_text(self, file: UploadFile) -> ExtractedDocument:
         filename = file.filename or "uploaded-file"
         suffix = os.path.splitext(filename)[1].lower()
         content = await file.read()
 
-        parser_name, extracted_text = self._extract_with_parser(suffix=suffix, content=content)
+        parser_name, extracted_text = await self._extract_with_parser(
+            suffix=suffix,
+            filename=filename,
+            content=content,
+        )
         normalized_text = normalize_extracted_text(extracted_text)
         if not normalized_text:
             raise HTTPException(status_code=422, detail="The uploaded file did not contain extractable text.")
@@ -38,11 +50,11 @@ class DocumentIngestionService:
             line_count=len(normalized_text.splitlines()),
         )
 
-    def _extract_with_parser(self, *, suffix: str, content: bytes) -> tuple[str, str]:
+    async def _extract_with_parser(self, *, suffix: str, filename: str, content: bytes) -> tuple[str, str]:
         if suffix in {".txt", ".md"}:
             return "plain_text", content.decode("utf-8-sig", errors="ignore")
         if suffix == ".pdf":
-            return "pdf", self._extract_pdf_text(content)
+            return await self._extract_pdf_text(content=content, filename=filename)
         if suffix == ".docx":
             return "docx", self._extract_docx_text(content)
         if suffix == ".hwpx":
@@ -54,18 +66,23 @@ class DocumentIngestionService:
             detail=f"Unsupported file type: {suffix or 'unknown'}. Use .txt, .md, .pdf, .docx, or .hwpx.",
         )
 
-    def _extract_pdf_text(self, content: bytes) -> str:
+    async def _extract_pdf_text(self, *, content: bytes, filename: str) -> tuple[str, str]:
         reader = PdfReader(BytesIO(content))
         pages = [page.extract_text() or "" for page in reader.pages]
         extracted_text = "\n\n".join(page for page in pages if page.strip())
         if extracted_text.strip():
-            return extracted_text
+            return "pdf", extracted_text
+
+        if self._ocr_service is not None:
+            logger.info("Falling back to vision OCR for scanned PDF: %s", filename)
+            ocr_text = await self._ocr_service.extract_pdf_text(content=content, filename=filename)
+            return "pdf_vision_ocr", ocr_text
 
         raise HTTPException(
             status_code=422,
             detail=(
-                "The uploaded PDF appears to be image-only scanned. OCR is not configured yet. "
-                "Upload an OCR-applied PDF or the original HWP/HWPX/DOCX file."
+                "The uploaded PDF appears to be image-only scanned. Vision OCR is not configured yet. "
+                "Set OPENAI_API_KEY to enable OCR, or upload an OCR-applied PDF or the original HWP/HWPX/DOCX file."
             ),
         )
 

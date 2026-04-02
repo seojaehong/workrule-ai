@@ -14,7 +14,8 @@
 - FastAPI 백엔드
 - OpenAI Responses API 연동
 - Pydantic 기반 Output Validation Harness
-- 문서 추출기: `txt`, `md`, `docx`, `pdf`, `hwpx`
+- 문서 추출기: `txt`, `md`, `docx`, `pdf`, `hwpx`, `hwp`
+- 스캔형 PDF용 OpenAI 비전 OCR fallback
 - 추출 텍스트 정규화 레이어
 
 ### `apps/web`
@@ -56,6 +57,9 @@ uvicorn app.main:app --reload
 
 기본값은 `LLM_MODE=mock` 이므로 OpenAI 키 없이도 진단 플로우를 눌러볼 수 있습니다.
 실제 모델로 전환하려면 `apps/api/.env` 에서 `LLM_MODE=openai` 로 바꾸고 `OPENAI_API_KEY` 를 넣으면 됩니다.
+
+스캔형 PDF OCR은 `LLM_MODE` 와 별개로 동작합니다.
+`OPENAI_API_KEY` 가 유효하고 `INGESTION_OCR_PROVIDER=openai` 이면, 텍스트 레이어가 없는 PDF 업로드 시 OpenAI 비전 OCR로 자동 fallback 됩니다.
 
 ### 2. Web
 

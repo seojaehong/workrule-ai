@@ -1,7 +1,7 @@
 {
   "checked_at": "2026-04-02",
-  "files_checked": 4,
-  "success_count": 3,
-  "failure_count": 1,
-  "elapsed_note": "See extraction-regression-20260402.json for per-file details."
+  "pytest_passed": 11,
+  "api_route_check_file": "취업규칙 24년.pdf",
+  "api_route_check_status_code": 422,
+  "api_route_check_note": "Vision OCR fallback is wired, but a valid OPENAI_API_KEY is still required for live OCR execution."
 }

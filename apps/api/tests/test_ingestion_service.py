@@ -47,7 +47,8 @@ def test_document_ingestion_service_prefers_hwpx_preview_text() -> None:
     assert extracted == "표준 취업규칙\n제1조 목적"
 
 
-def test_document_ingestion_service_detects_image_only_pdf() -> None:
+@pytest.mark.asyncio
+async def test_document_ingestion_service_detects_image_only_pdf() -> None:
     service = DocumentIngestionService()
 
     class EmptyPage:
@@ -61,10 +62,34 @@ def test_document_ingestion_service_detects_image_only_pdf() -> None:
         monkeypatch.setattr("app.services.ingestion.document_ingestion_service.PdfReader", lambda _: EmptyReader())
 
         with pytest.raises(HTTPException) as error:
-            service._extract_pdf_text(b"%PDF-1.4")
+            await service._extract_pdf_text(content=b"%PDF-1.4", filename="scan.pdf")
 
     assert error.value.status_code == 422
-    assert "image-only scanned" in str(error.value.detail)
+    assert "Vision OCR is not configured yet" in str(error.value.detail)
+
+
+@pytest.mark.asyncio
+async def test_document_ingestion_service_uses_vision_ocr_for_image_only_pdf() -> None:
+    class StubOCRService:
+        async def extract_pdf_text(self, *, content: bytes, filename: str) -> str:
+            assert filename == "scan.pdf"
+            return "제1조 목적\nOCR 추출 본문"
+
+    service = DocumentIngestionService(ocr_service=StubOCRService())
+
+    class EmptyPage:
+        def extract_text(self) -> str:
+            return ""
+
+    class EmptyReader:
+        pages = [EmptyPage()]
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr("app.services.ingestion.document_ingestion_service.PdfReader", lambda _: EmptyReader())
+        parser, extracted = await service._extract_pdf_text(content=b"%PDF-1.4", filename="scan.pdf")
+
+    assert parser == "pdf_vision_ocr"
+    assert extracted == "제1조 목적\nOCR 추출 본문"
 
 
 def test_document_ingestion_service_prefers_hwp_preview_text() -> None:

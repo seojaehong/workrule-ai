@@ -1,0 +1,7 @@
+{
+  "filename": "취업규칙 24년.pdf",
+  "status_code": 422,
+  "payload": {
+    "detail": "The uploaded PDF appears to be image-only scanned. Vision OCR is not configured yet. Set OPENAI_API_KEY to enable OCR, or upload an OCR-applied PDF or the original HWP/HWPX/DOCX file."
+  }
+}
