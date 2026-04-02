@@ -1,0 +1,156 @@
+{
+  "checked_at": "2026-04-02",
+  "llm_mode": "mock",
+  "elapsed_seconds": 73.14,
+  "runs": [
+    {
+      "pair": "24_vs_26",
+      "run": 1,
+      "company_file": "취업규칙 24년.pdf",
+      "company_ingest_status": 200,
+      "company_parser": "pdf_ocr_fallback",
+      "company_char_count": 36696,
+      "company_hash": "7cd3e30657eb6b0a23d1afb159d5964ddca7d0ac35fb5ac1537c20d75d9f307e",
+      "standard_file": "표준취업규칙(2026년, 배포).pdf",
+      "standard_ingest_status": 200,
+      "standard_parser": "pdf",
+      "standard_char_count": 129579,
+      "standard_hash": "e9a3a6f858ea5ef0b74db027fcdf978645403c755b40f574961af40d602b88bc",
+      "diagnose_status": 200,
+      "diagnose_total_findings": 2,
+      "diagnose_findings_count": 2,
+      "company_preview": "# 취 업 규 칙\n\n2024년\n\n(주) 내 산\n\n1\n\n# 제 1 장 총 칙\n\n# 제1조(목 적)\n\n본 규칙은 근로기준법(이하 '법' 이라 한다)에 따라 (주)내산(이하 '회사' 라 한다)에서 근로하\n는 사원의 근로조건을 정함으로써 회사의 발전과 사원의 근로조건향상 및 복리증진을 도모함을\n목적으로 한다.\n\n# 제2조(적용범",
+      "standard_preview": "표 준 취 업 규 칙2026. 2.◈ 이 자료는 주40시간제가 적용되는 제조업체를 가정하여 작성한 것이므로 동 자료를 참고하여 사업장의 취업규칙을 작성·변경할 때는 근로기준법 등 노동관계법령에 위배되지 않는 범위 내에서 사업장의 규모나 업무의 특성에 맞게 변형하여야 합니다.◈ 또한, 이 자료는 배포 당시 시행되고 있는 노"
+    },
+    {
+      "pair": "24_vs_26",
+      "run": 2,
+      "company_file": "취업규칙 24년.pdf",
+      "company_ingest_status": 200,
+      "company_parser": "pdf_ocr_fallback",
+      "company_char_count": 36696,
+      "company_hash": "7cd3e30657eb6b0a23d1afb159d5964ddca7d0ac35fb5ac1537c20d75d9f307e",
+      "standard_file": "표준취업규칙(2026년, 배포).pdf",
+      "standard_ingest_status": 200,
+      "standard_parser": "pdf",
+      "standard_char_count": 129579,
+      "standard_hash": "e9a3a6f858ea5ef0b74db027fcdf978645403c755b40f574961af40d602b88bc",
+      "diagnose_status": 200,
+      "diagnose_total_findings": 2,
+      "diagnose_findings_count": 2,
+      "company_preview": "# 취 업 규 칙\n\n2024년\n\n(주) 내 산\n\n1\n\n# 제 1 장 총 칙\n\n# 제1조(목 적)\n\n본 규칙은 근로기준법(이하 '법' 이라 한다)에 따라 (주)내산(이하 '회사' 라 한다)에서 근로하\n는 사원의 근로조건을 정함으로써 회사의 발전과 사원의 근로조건향상 및 복리증진을 도모함을\n목적으로 한다.\n\n# 제2조(적용범",
+      "standard_preview": "표 준 취 업 규 칙2026. 2.◈ 이 자료는 주40시간제가 적용되는 제조업체를 가정하여 작성한 것이므로 동 자료를 참고하여 사업장의 취업규칙을 작성·변경할 때는 근로기준법 등 노동관계법령에 위배되지 않는 범위 내에서 사업장의 규모나 업무의 특성에 맞게 변형하여야 합니다.◈ 또한, 이 자료는 배포 당시 시행되고 있는 노"
+    },
+    {
+      "pair": "24_vs_26",
+      "run": 3,
+      "company_file": "취업규칙 24년.pdf",
+      "company_ingest_status": 200,
+      "company_parser": "pdf_ocr_fallback",
+      "company_char_count": 36696,
+      "company_hash": "7cd3e30657eb6b0a23d1afb159d5964ddca7d0ac35fb5ac1537c20d75d9f307e",
+      "standard_file": "표준취업규칙(2026년, 배포).pdf",
+      "standard_ingest_status": 200,
+      "standard_parser": "pdf",
+      "standard_char_count": 129579,
+      "standard_hash": "e9a3a6f858ea5ef0b74db027fcdf978645403c755b40f574961af40d602b88bc",
+      "diagnose_status": 200,
+      "diagnose_total_findings": 2,
+      "diagnose_findings_count": 2,
+      "company_preview": "# 취 업 규 칙\n\n2024년\n\n(주) 내 산\n\n1\n\n# 제 1 장 총 칙\n\n# 제1조(목 적)\n\n본 규칙은 근로기준법(이하 '법' 이라 한다)에 따라 (주)내산(이하 '회사' 라 한다)에서 근로하\n는 사원의 근로조건을 정함으로써 회사의 발전과 사원의 근로조건향상 및 복리증진을 도모함을\n목적으로 한다.\n\n# 제2조(적용범",
+      "standard_preview": "표 준 취 업 규 칙2026. 2.◈ 이 자료는 주40시간제가 적용되는 제조업체를 가정하여 작성한 것이므로 동 자료를 참고하여 사업장의 취업규칙을 작성·변경할 때는 근로기준법 등 노동관계법령에 위배되지 않는 범위 내에서 사업장의 규모나 업무의 특성에 맞게 변형하여야 합니다.◈ 또한, 이 자료는 배포 당시 시행되고 있는 노"
+    },
+    {
+      "pair": "25_vs_26",
+      "run": 1,
+      "company_file": "(주)내산_2022 취업규칙)개정안_250701.hwp",
+      "company_ingest_status": 200,
+      "company_parser": "hwp",
+      "company_char_count": 955,
+      "company_hash": "e1efce3afc35ecf38cbed3f0f4ba74b95f40b79bca6255bbb1b094c41358d9e4",
+      "standard_file": "표준취업규칙(2026년, 배포).pdf",
+      "standard_ingest_status": 200,
+      "standard_parser": "pdf",
+      "standard_char_count": 129579,
+      "standard_hash": "e9a3a6f858ea5ef0b74db027fcdf978645403c755b40f574961af40d602b88bc",
+      "diagnose_status": 200,
+      "diagnose_total_findings": 1,
+      "diagnose_findings_count": 1,
+      "company_preview": "<취 업 규 칙>\n\n(주) 내산\n\n제 1 장 총 칙\n\n제1조(목 적)\n본 규칙은 근로기준법(이하‘법’이라 한다)에 따라 (주)내산(이하‘회사’라 한다)에서 근로하는 사원의 근로조건을 정함으로써 회사의 발전과 사원의 근로조건향상 및 복리증진을 도모함을 목적으로 한다.\n\n제2조(적용범위)\n사원의 취업에 관하여는 본 규칙에 정",
+      "standard_preview": "표 준 취 업 규 칙2026. 2.◈ 이 자료는 주40시간제가 적용되는 제조업체를 가정하여 작성한 것이므로 동 자료를 참고하여 사업장의 취업규칙을 작성·변경할 때는 근로기준법 등 노동관계법령에 위배되지 않는 범위 내에서 사업장의 규모나 업무의 특성에 맞게 변형하여야 합니다.◈ 또한, 이 자료는 배포 당시 시행되고 있는 노"
+    },
+    {
+      "pair": "25_vs_26",
+      "run": 2,
+      "company_file": "(주)내산_2022 취업규칙)개정안_250701.hwp",
+      "company_ingest_status": 200,
+      "company_parser": "hwp",
+      "company_char_count": 955,
+      "company_hash": "e1efce3afc35ecf38cbed3f0f4ba74b95f40b79bca6255bbb1b094c41358d9e4",
+      "standard_file": "표준취업규칙(2026년, 배포).pdf",
+      "standard_ingest_status": 200,
+      "standard_parser": "pdf",
+      "standard_char_count": 129579,
+      "standard_hash": "e9a3a6f858ea5ef0b74db027fcdf978645403c755b40f574961af40d602b88bc",
+      "diagnose_status": 200,
+      "diagnose_total_findings": 1,
+      "diagnose_findings_count": 1,
+      "company_preview": "<취 업 규 칙>\n\n(주) 내산\n\n제 1 장 총 칙\n\n제1조(목 적)\n본 규칙은 근로기준법(이하‘법’이라 한다)에 따라 (주)내산(이하‘회사’라 한다)에서 근로하는 사원의 근로조건을 정함으로써 회사의 발전과 사원의 근로조건향상 및 복리증진을 도모함을 목적으로 한다.\n\n제2조(적용범위)\n사원의 취업에 관하여는 본 규칙에 정",
+      "standard_preview": "표 준 취 업 규 칙2026. 2.◈ 이 자료는 주40시간제가 적용되는 제조업체를 가정하여 작성한 것이므로 동 자료를 참고하여 사업장의 취업규칙을 작성·변경할 때는 근로기준법 등 노동관계법령에 위배되지 않는 범위 내에서 사업장의 규모나 업무의 특성에 맞게 변형하여야 합니다.◈ 또한, 이 자료는 배포 당시 시행되고 있는 노"
+    },
+    {
+      "pair": "25_vs_26",
+      "run": 3,
+      "company_file": "(주)내산_2022 취업규칙)개정안_250701.hwp",
+      "company_ingest_status": 200,
+      "company_parser": "hwp",
+      "company_char_count": 955,
+      "company_hash": "e1efce3afc35ecf38cbed3f0f4ba74b95f40b79bca6255bbb1b094c41358d9e4",
+      "standard_file": "표준취업규칙(2026년, 배포).pdf",
+      "standard_ingest_status": 200,
+      "standard_parser": "pdf",
+      "standard_char_count": 129579,
+      "standard_hash": "e9a3a6f858ea5ef0b74db027fcdf978645403c755b40f574961af40d602b88bc",
+      "diagnose_status": 200,
+      "diagnose_total_findings": 1,
+      "diagnose_findings_count": 1,
+      "company_preview": "<취 업 규 칙>\n\n(주) 내산\n\n제 1 장 총 칙\n\n제1조(목 적)\n본 규칙은 근로기준법(이하‘법’이라 한다)에 따라 (주)내산(이하‘회사’라 한다)에서 근로하는 사원의 근로조건을 정함으로써 회사의 발전과 사원의 근로조건향상 및 복리증진을 도모함을 목적으로 한다.\n\n제2조(적용범위)\n사원의 취업에 관하여는 본 규칙에 정",
+      "standard_preview": "표 준 취 업 규 칙2026. 2.◈ 이 자료는 주40시간제가 적용되는 제조업체를 가정하여 작성한 것이므로 동 자료를 참고하여 사업장의 취업규칙을 작성·변경할 때는 근로기준법 등 노동관계법령에 위배되지 않는 범위 내에서 사업장의 규모나 업무의 특성에 맞게 변형하여야 합니다.◈ 또한, 이 자료는 배포 당시 시행되고 있는 노"
+    }
+  ],
+  "summary": {
+    "24_vs_26": {
+      "runs": 3,
+      "company_parser_set": [
+        "pdf_ocr_fallback"
+      ],
+      "standard_parser_set": [
+        "pdf"
+      ],
+      "company_hash_variants": 1,
+      "standard_hash_variants": 1,
+      "diagnose_findings_count_variants": [
+        2
+      ],
+      "all_ingest_ok": true,
+      "all_diagnose_ok": true
+    },
+    "25_vs_26": {
+      "runs": 3,
+      "company_parser_set": [
+        "hwp"
+      ],
+      "standard_parser_set": [
+        "pdf"
+      ],
+      "company_hash_variants": 1,
+      "standard_hash_variants": 1,
+      "diagnose_findings_count_variants": [
+        1
+      ],
+      "all_ingest_ok": true,
+      "all_diagnose_ok": true
+    }
+  },
+  "note": "This compares extraction quality and pipeline consistency. Diagnose content quality remains mock-mode limited."
+}

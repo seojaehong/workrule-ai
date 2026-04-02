@@ -15,7 +15,7 @@
 - OpenAI Responses API 연동
 - Pydantic 기반 Output Validation Harness
 - 문서 추출기: `txt`, `md`, `docx`, `pdf`, `hwpx`, `hwp`
-- 스캔형 PDF용 OpenAI 비전 OCR fallback
+- 스캔형 PDF용 OCR fallback (`Upstage Document Parse Standard` 기본)
 - 추출 텍스트 정규화 레이어
 
 ### `apps/web`
@@ -59,7 +59,8 @@ uvicorn app.main:app --reload
 실제 모델로 전환하려면 `apps/api/.env` 에서 `LLM_MODE=openai` 로 바꾸고 `OPENAI_API_KEY` 를 넣으면 됩니다.
 
 스캔형 PDF OCR은 `LLM_MODE` 와 별개로 동작합니다.
-`OPENAI_API_KEY` 가 유효하고 `INGESTION_OCR_PROVIDER=openai` 이면, 텍스트 레이어가 없는 PDF 업로드 시 OpenAI 비전 OCR로 자동 fallback 됩니다.
+기본값은 `INGESTION_OCR_PROVIDER=upstage` 이며, `UPSTAGE_API_KEY` 가 유효하면 텍스트 레이어가 없는 PDF 업로드 시 `Upstage Document Parse Standard` 로 자동 fallback 됩니다.
+출력 형식은 `INGESTION_OCR_OUTPUT_FORMAT=markdown` 으로 설정되어 있어 조문/표 구조를 최대한 유지합니다.
 
 ### 2. Web
 

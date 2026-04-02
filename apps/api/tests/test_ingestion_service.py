@@ -65,7 +65,7 @@ async def test_document_ingestion_service_detects_image_only_pdf() -> None:
             await service._extract_pdf_text(content=b"%PDF-1.4", filename="scan.pdf")
 
     assert error.value.status_code == 422
-    assert "Vision OCR is not configured yet" in str(error.value.detail)
+    assert "Configure an OCR provider" in str(error.value.detail)
 
 
 @pytest.mark.asyncio
@@ -88,7 +88,7 @@ async def test_document_ingestion_service_uses_vision_ocr_for_image_only_pdf() -
         monkeypatch.setattr("app.services.ingestion.document_ingestion_service.PdfReader", lambda _: EmptyReader())
         parser, extracted = await service._extract_pdf_text(content=b"%PDF-1.4", filename="scan.pdf")
 
-    assert parser == "pdf_vision_ocr"
+    assert parser == "pdf_ocr_fallback"
     assert extracted == "제1조 목적\nOCR 추출 본문"
 
 

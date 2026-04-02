@@ -11,8 +11,8 @@ import olefile
 from pypdf import PdfReader
 
 from app.domain.schemas.ingestion import ExtractedDocument
+from app.services.ingestion.ocr_service import OCRService
 from app.services.ingestion.text_normalizer import normalize_extracted_text
-from app.services.ingestion.vision_ocr_service import VisionOCRService
 
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class DocumentIngestionService:
     _hwp_paragraph_text_tag = 67
     _hwpx_preview_entry = "Preview/PrvText.txt"
 
-    def __init__(self, *, ocr_service: VisionOCRService | None = None) -> None:
+    def __init__(self, *, ocr_service: OCRService | None = None) -> None:
         self._ocr_service = ocr_service
 
     async def extract_text(self, file: UploadFile) -> ExtractedDocument:
@@ -76,13 +76,13 @@ class DocumentIngestionService:
         if self._ocr_service is not None:
             logger.info("Falling back to vision OCR for scanned PDF: %s", filename)
             ocr_text = await self._ocr_service.extract_pdf_text(content=content, filename=filename)
-            return "pdf_vision_ocr", ocr_text
+            return "pdf_ocr_fallback", ocr_text
 
         raise HTTPException(
             status_code=422,
             detail=(
                 "The uploaded PDF appears to be image-only scanned. Vision OCR is not configured yet. "
-                "Set OPENAI_API_KEY to enable OCR, or upload an OCR-applied PDF or the original HWP/HWPX/DOCX file."
+                "Configure an OCR provider, or upload an OCR-applied PDF or the original HWP/HWPX/DOCX file."
             ),
         )
 

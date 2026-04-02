@@ -1,7 +1,10 @@
 {
   "checked_at": "2026-04-02",
-  "pytest_passed": 11,
-  "api_route_check_file": "취업규칙 24년.pdf",
-  "api_route_check_status_code": 422,
-  "api_route_check_note": "Vision OCR fallback is wired, but a valid OPENAI_API_KEY is still required for live OCR execution."
+  "pairs_tested": 2,
+  "dry_runs_per_pair": 3,
+  "total_runs": 6,
+  "all_ingest_ok": true,
+  "all_diagnose_ok": true,
+  "elapsed_seconds": 73.14,
+  "note": "Pipeline stability verified for 24/26 and 25/26 in mock mode."
 }
