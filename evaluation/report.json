@@ -1,16 +1,17 @@
 {
-  "ocr_provider": "upstage_document_parse_standard",
+  "mode": "deployment-ready-draft-export",
   "compare_artifacts": [
     "evaluation/hybrid-live-22-vs-26-final-20260402.json",
     "evaluation/hybrid-live-24-vs-26-final-20260402.json",
     "evaluation/hybrid-live-25-vs-26-detailed-20260402.json"
   ],
-  "pairs_tested": 3,
-  "exported_hwpx": "evaluation/내산_최신취업규칙_초안_20260402.hwpx",
-  "successful_pairs": 3,
-  "llm_provider": "upstage",
   "checked_at": "2026-04-02",
+  "web_proxy_export": "evaluation/내산_최신취업규칙_초안_webproxy_20260402.hwpx",
+  "pairs_tested": 3,
+  "web_proxy_draft_meta": "evaluation/내산_최신취업규칙_초안_webproxy_메타_20260402.json",
   "generated_markdown": "evaluation/내산_최신취업규칙_초안_20260402.md",
-  "mode": "hybrid-live-with-export",
-  "web_proxy_export": "evaluation/내산_최신취업규칙_초안_webproxy_20260402.hwpx"
+  "llm_provider": "upstage",
+  "ocr_provider": "upstage_document_parse_standard",
+  "exported_hwpx": "evaluation/내산_최신취업규칙_초안_20260402.hwpx",
+  "successful_pairs": 3
 }

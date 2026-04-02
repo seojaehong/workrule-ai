@@ -12,7 +12,11 @@ class DraftGenerationRequest(BaseStrictModel):
 class DraftGenerationResult(BaseStrictModel):
     company_name: str
     draft_title: str
+    export_filename: str
+    draft_plain_text: str = Field(min_length=1)
     draft_markdown: str = Field(min_length=1)
     applied_replacements: int = Field(ge=0)
     inserted_clauses: int = Field(ge=0)
+    section_count: int = Field(ge=0)
+    sections: list[str] = Field(default_factory=list)
     unresolved_findings: list[str] = Field(default_factory=list)

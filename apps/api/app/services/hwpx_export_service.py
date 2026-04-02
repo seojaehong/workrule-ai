@@ -15,7 +15,7 @@ class HWPXExportService:
     def __init__(self, *, template_path: str) -> None:
         self._template_path = Path(template_path)
 
-    def export(self, *, filename_stem: str, draft_text: str) -> tuple[str, bytes]:
+    def export(self, *, filename: str, draft_text: str) -> tuple[str, bytes]:
         if not self._template_path.exists():
             raise FileNotFoundError(f"HWPX template not found: {self._template_path}")
 
@@ -57,7 +57,6 @@ class HWPXExportService:
             for info in infos:
                 archive.writestr(info, data_by_name[info.filename])
 
-        filename = f"{filename_stem}.hwpx"
         return filename, output.getvalue()
 
     @staticmethod

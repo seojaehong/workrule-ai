@@ -17,9 +17,13 @@ class StubDraftDocumentService(DraftDocumentService):
         return DraftGenerationResult(
             company_name=company_name,
             draft_title="내산 최신 취업규칙 초안",
+            export_filename="내산_최신_취업규칙_초안.hwpx",
+            draft_plain_text="내산 최신 취업규칙 초안\n\n제1조 목적",
             draft_markdown="# 내산 최신 취업규칙 초안\n\n제1조 목적",
             applied_replacements=1,
             inserted_clauses=0,
+            section_count=1,
+            sections=["제1조 목적"],
             unresolved_findings=[],
         )
 
@@ -28,8 +32,8 @@ class StubHWPXExportService(HWPXExportService):
     def __init__(self) -> None:
         pass
 
-    def export(self, *, filename_stem: str, draft_text: str) -> tuple[str, bytes]:
-        return f"{filename_stem}.hwpx", draft_text.encode("utf-8")
+    def export(self, *, filename: str, draft_text: str) -> tuple[str, bytes]:
+        return filename, draft_text.encode("utf-8")
 
     @staticmethod
     def build_content_disposition(filename: str) -> str:

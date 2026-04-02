@@ -53,21 +53,27 @@ class DraftDocumentService:
             segment_by_key[article_key] = inserted_segment
             inserted_clauses += 1
 
-        draft_body = self._render_segments(segments, trailing_text)
+        draft_plain_text = self._render_segments(segments, trailing_text)
         draft_title = f"{request.company_name} 최신 취업규칙 초안"
+        export_filename = self._build_export_filename(draft_title)
+        sections = [segment.block.strip() for segment in segments if segment.block.strip()]
         draft_markdown = (
             f"# {draft_title}\n\n"
             f"- 생성 기준: 2025 취업규칙 기준 + 2026 표준취업규칙 반영\n"
             f"- 검토 결과 반영 건수: {request.diagnosis_result.summary.total_findings}\n\n"
-            f"{draft_body.strip()}\n"
+            f"{draft_plain_text.strip()}\n"
         )
 
         return DraftGenerationResult(
             company_name=request.company_name,
             draft_title=draft_title,
+            export_filename=export_filename,
+            draft_plain_text=draft_plain_text,
             draft_markdown=draft_markdown,
             applied_replacements=applied_replacements,
             inserted_clauses=inserted_clauses,
+            section_count=len(sections),
+            sections=sections,
             unresolved_findings=unresolved_findings,
         )
 
@@ -113,6 +119,11 @@ class DraftDocumentService:
         if not stripped:
             return None
         return stripped
+
+    def _build_export_filename(self, draft_title: str) -> str:
+        sanitized = re.sub(r'[\\/:*?"<>|]+', "_", draft_title)
+        sanitized = re.sub(r"\s+", "_", sanitized).strip("._")
+        return f"{sanitized or 'latest_workrule_draft'}.hwpx"
 
     def _extract_article_key(self, text: str) -> str | None:
         match = re.search(r"제\s*(\d+)\s*조(?:\s*의\s*(\d+))?", text)

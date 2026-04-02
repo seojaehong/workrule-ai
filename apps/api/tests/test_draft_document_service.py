@@ -56,5 +56,8 @@ def test_generate_draft_replaces_and_inserts_clauses() -> None:
 
     assert result.applied_replacements == 1
     assert result.inserted_clauses == 1
+    assert result.export_filename.endswith(".hwpx")
+    assert "# 내산 최신 취업규칙 초안" in result.draft_markdown
+    assert "# 내산 최신 취업규칙 초안" not in result.draft_plain_text
     assert "제6조(법령과의 관계) 개정 규정." in result.draft_markdown
     assert "제7조(차별금지) 차별금지 확장 문안." in result.draft_markdown

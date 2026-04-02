@@ -26,8 +26,8 @@ async def export_hwpx(
 
     try:
         filename, content = export_service.export(
-            filename_stem=draft.draft_title.replace(" ", "_"),
-            draft_text=draft.draft_markdown,
+            filename=draft.export_filename,
+            draft_text=draft.draft_plain_text,
         )
     except FileNotFoundError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error

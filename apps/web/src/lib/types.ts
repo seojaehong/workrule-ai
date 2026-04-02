@@ -100,8 +100,12 @@ export interface DraftGenerationRequest {
 export interface DraftGenerationResult {
   company_name: string;
   draft_title: string;
+  export_filename: string;
+  draft_plain_text: string;
   draft_markdown: string;
   applied_replacements: number;
   inserted_clauses: number;
+  section_count: number;
+  sections: string[];
   unresolved_findings: string[];
 }

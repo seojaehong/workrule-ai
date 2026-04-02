@@ -10,6 +10,7 @@ import {
 } from "@/lib/demo-data";
 import type {
   DraftGenerationRequest,
+  DraftGenerationResult,
   ExtractedDocument,
   ReviewDiagnosisRequest,
   ReviewDiagnosisResult,
@@ -68,6 +69,7 @@ const inputClassName =
 export function ReviewWorkbench() {
   const [form, setForm] = useState<ReviewDiagnosisRequest>(DEMO_REQUEST);
   const [result, setResult] = useState<ReviewDiagnosisResult | null>(DEMO_RESULT);
+  const [draftResult, setDraftResult] = useState<DraftGenerationResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastRunMode, setLastRunMode] = useState<"demo" | "live">("demo");
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("compare");
@@ -75,6 +77,7 @@ export function ReviewWorkbench() {
     "company_rule_text" | "standard_rule_text" | null
   >(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const deferredCurrentRule = useDeferredValue(form.company_rule_text);
@@ -95,33 +98,6 @@ export function ReviewWorkbench() {
   const currentResult = result;
   const summary = currentResult?.summary ?? null;
 
-  const generatedDraftSections = useMemo(() => {
-    if (!currentResult) {
-      return [];
-    }
-
-    return currentResult.findings.map((finding, index) => ({
-      id: `${finding.finding_id}-${index}`,
-      title: finding.clause_title,
-      body: finding.suggested_text,
-      rationale: finding.reason,
-      laws: finding.related_laws.join(", "),
-    }));
-  }, [currentResult]);
-
-  const generatedDraftText = useMemo(() => {
-    if (generatedDraftSections.length === 0) {
-      return "";
-    }
-
-    return generatedDraftSections
-      .map(
-        (section, index) =>
-          `제안 ${index + 1}. ${section.title}\n${section.body}\n\n[반영 사유]\n${section.rationale}`,
-      )
-      .join("\n\n");
-  }, [generatedDraftSections]);
-
   function updateField<Key extends keyof ReviewDiagnosisRequest>(
     key: Key,
     value: ReviewDiagnosisRequest[Key],
@@ -139,6 +115,7 @@ export function ReviewWorkbench() {
   function loadDemo() {
     setForm(DEMO_REQUEST);
     setResult(DEMO_RESULT);
+    setDraftResult(null);
     setLastRunMode("demo");
     setWorkspaceView("compare");
     setErrorMessage(null);
@@ -155,13 +132,48 @@ export function ReviewWorkbench() {
       review_date: "",
     });
     setResult(null);
+    setDraftResult(null);
     setErrorMessage(null);
     setWorkspaceView("compare");
+  }
+
+  async function generateDraft(nextResult: ReviewDiagnosisResult) {
+    setIsGeneratingDraft(true);
+
+    try {
+      const payload: DraftGenerationRequest = {
+        company_name: form.company_name,
+        baseline_rule_text: form.company_rule_text,
+        diagnosis_result: nextResult,
+      };
+
+      const response = await fetch("/api/generate-draft", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const payloadJson = (await response.json()) as DraftGenerationResult | { detail?: string };
+      if (!response.ok) {
+        throw new Error(
+          "detail" in payloadJson && payloadJson.detail
+            ? payloadJson.detail
+            : "개정안 초안 생성에 실패했습니다.",
+        );
+      }
+
+      setDraftResult(payloadJson as DraftGenerationResult);
+    } finally {
+      setIsGeneratingDraft(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
+    setDraftResult(null);
 
     startTransition(async () => {
       try {
@@ -187,7 +199,9 @@ export function ReviewWorkbench() {
           );
         }
 
-        setResult(payload as ReviewDiagnosisResult);
+        const nextResult = payload as ReviewDiagnosisResult;
+        setResult(nextResult);
+        await generateDraft(nextResult);
         setWorkspaceView("compare");
         setLastRunMode("live");
       } catch (error) {
@@ -237,7 +251,7 @@ export function ReviewWorkbench() {
   }
 
   async function handleExportHwpx() {
-    if (!currentResult) {
+    if (!currentResult || !draftResult) {
       return;
     }
 
@@ -620,52 +634,86 @@ export function ReviewWorkbench() {
                     Draft strategy
                   </p>
                   <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
-                    대조 결과에서 수정이 필요한 문안만 모아 개정 취업규칙 초안으로 구성했습니다.
-                    실제 적용 전에는 조문 번호, 장/절 체계, 사업장 고유 조항을 함께 검토해야 합니다.
+                    비교 결과를 기준으로 백엔드에서 최신 취업규칙 초안을 생성했습니다. 화면 표시와
+                    HWPX 다운로드는 같은 초안 데이터를 사용합니다.
                   </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Metric
+                    label="적용된 조문 치환"
+                    value={draftResult ? `${draftResult.applied_replacements}건` : "-"}
+                  />
+                  <Metric
+                    label="신규 삽입 조문"
+                    value={draftResult ? `${draftResult.inserted_clauses}건` : "-"}
+                  />
                 </div>
 
                 <section>
                   <div className="flex items-center justify-between gap-3">
-                    <SectionHeader title="개정 초안 섹션" meta={`${generatedDraftSections.length} items`} />
+                    <SectionHeader
+                      title="개정 초안 섹션"
+                      meta={draftResult ? `${draftResult.section_count} items` : "pending"}
+                    />
                     <button
                       type="button"
                       onClick={handleExportHwpx}
-                      disabled={isExporting}
+                      disabled={isExporting || !draftResult}
                       className="rounded-full border border-[color:var(--line)] px-4 py-2 text-xs font-semibold transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isExporting ? "HWPX 생성 중..." : "HWPX 다운로드"}
                     </button>
                   </div>
-                  <div className="mt-3 space-y-3">
-                    {generatedDraftSections.map((section) => (
-                      <article
-                        key={section.id}
-                        className="rounded-[1.5rem] border border-[color:var(--line)] px-4 py-4"
-                      >
-                        <p className="font-semibold">{section.title}</p>
-                        <p className="mt-3 whitespace-pre-wrap text-sm leading-7">
-                          {section.body}
-                        </p>
-                        <p className="mt-3 text-xs leading-6 text-[color:var(--muted)]">
-                          반영 사유: {section.rationale}
-                        </p>
-                        <p className="mt-1 text-xs leading-6 text-[color:var(--muted)]">
-                          관련 법령: {section.laws || "기준문 참고"}
-                        </p>
-                      </article>
-                    ))}
-                  </div>
+                  {isGeneratingDraft ? (
+                    <div className="mt-3 rounded-[1.5rem] border border-[color:var(--line)] px-4 py-8 text-sm text-[color:var(--muted)]">
+                      개정 취업규칙 초안을 생성하고 있습니다.
+                    </div>
+                  ) : draftResult ? (
+                    <div className="mt-3 space-y-3">
+                      {draftResult.sections.slice(0, 8).map((section, index) => (
+                        <article
+                          key={`${section.slice(0, 40)}-${index}`}
+                          className="rounded-[1.5rem] border border-[color:var(--line)] px-4 py-4"
+                        >
+                          <p className="whitespace-pre-wrap text-sm leading-7">{section}</p>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-[1.5rem] border border-[color:var(--line)] px-4 py-8 text-sm text-[color:var(--muted)]">
+                      아직 개정안 초안이 생성되지 않았습니다.
+                    </div>
+                  )}
                 </section>
 
                 <section>
-                  <SectionHeader title="통합 개정안 텍스트" meta="copy ready" />
+                  <SectionHeader title="통합 개정안 텍스트" meta="server generated" />
                   <textarea
-                    value={generatedDraftText}
+                    value={draftResult?.draft_plain_text ?? ""}
                     readOnly
                     className={`${inputClassName} mt-3 min-h-[260px] resize-y`}
                   />
                 </section>
+
+                {draftResult?.unresolved_findings.length ? (
+                  <section>
+                    <SectionHeader
+                      title="추가 확인 필요"
+                      meta={`${draftResult.unresolved_findings.length} items`}
+                    />
+                    <div className="mt-3 space-y-2">
+                      {draftResult.unresolved_findings.map((item) => (
+                        <div
+                          key={item}
+                          className="rounded-3xl border border-[color:var(--line)] bg-white/30 px-4 py-3 text-sm leading-6 dark:bg-white/5"
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
               </div>
             ) : (
               <div className="mt-6 space-y-6">
