@@ -1,16 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f2f3ee;
-  --foreground: #102124;
-  --surface: rgba(251, 252, 248, 0.78);
-  --surface-strong: rgba(247, 249, 244, 0.92);
-  --line: rgba(16, 33, 36, 0.12);
-  --muted: #526165;
-  --accent: #0f766e;
-  --accent-soft: rgba(15, 118, 110, 0.12);
-  --success: #176b50;
-  --danger: #8d2f3a;
+  --background: #f6f5f1;
+  --foreground: #12181c;
+  --panel: rgba(255, 255, 255, 0.58);
+  --panel-strong: rgba(255, 255, 255, 0.82);
+  --surface: rgba(255, 255, 255, 0.68);
+  --surface-strong: rgba(255, 255, 255, 0.86);
+  --line: rgba(18, 24, 28, 0.11);
+  --line-strong: rgba(18, 24, 28, 0.22);
+  --muted: #5d6870;
+  --accent: #1259c3;
+  --accent-soft: rgba(18, 89, 195, 0.1);
+  --success: #1f7a5a;
+  --danger: #9c3243;
 }
 
 @theme inline {
@@ -22,16 +25,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #091419;
-    --foreground: #ecf5f3;
-    --surface: rgba(14, 31, 37, 0.82);
-    --surface-strong: rgba(17, 37, 44, 0.94);
-    --line: rgba(231, 245, 241, 0.1);
-    --muted: #b4c7c5;
-    --accent: #5ad2c8;
-    --accent-soft: rgba(90, 210, 200, 0.16);
-    --success: #8ae0bf;
-    --danger: #ffb4c0;
+    --background: #0c1014;
+    --foreground: #edf1f5;
+    --panel: rgba(19, 24, 31, 0.78);
+    --panel-strong: rgba(20, 27, 34, 0.92);
+    --surface: rgba(17, 23, 30, 0.84);
+    --surface-strong: rgba(15, 21, 28, 0.96);
+    --line: rgba(237, 241, 245, 0.08);
+    --line-strong: rgba(237, 241, 245, 0.16);
+    --muted: #a7b1ba;
+    --accent: #6da0ff;
+    --accent-soft: rgba(109, 160, 255, 0.14);
+    --success: #8fdab8;
+    --danger: #ffb4bf;
   }
 }
 
@@ -48,9 +54,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   background-image:
-    radial-gradient(circle at top left, rgba(15, 118, 110, 0.18), transparent 34%),
-    radial-gradient(circle at 90% 10%, rgba(130, 157, 140, 0.16), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), transparent 42%);
+    radial-gradient(circle at top left, rgba(18, 89, 195, 0.12), transparent 28%),
+    radial-gradient(circle at 85% 0%, rgba(22, 40, 74, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent 40%);
 }
 
 button,
@@ -67,60 +73,22 @@ textarea {
   position: relative;
 }
 
-.grain::after {
+.legal-shell::after {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 26px 26px;
-  mask-image: linear-gradient(180deg, black, transparent);
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.3) 100%);
+  opacity: 0.5;
+  z-index: 0;
 }
 
 .poster-shadow {
   box-shadow:
-    0 24px 80px rgba(7, 28, 33, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
-}
-
-.animate-rise {
-  animation: rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-.animate-fade {
-  animation: fade 0.8s ease both;
-}
-
-.delay-1 {
-  animation-delay: 0.08s;
-}
-
-.delay-2 {
-  animation-delay: 0.16s;
-}
-
-.delay-3 {
-  animation-delay: 0.24s;
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 26px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+    0 28px 80px rgba(15, 22, 31, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }

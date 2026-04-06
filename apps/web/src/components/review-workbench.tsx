@@ -17,8 +17,8 @@ import type {
   ToolTraceItem,
 } from "@/lib/types";
 
-const messageInputClassName =
-  "w-full rounded-[1.6rem] border border-[color:var(--line)] bg-white/55 px-4 py-4 outline-none transition placeholder:text-[color:var(--muted)]/70 focus:border-[color:var(--accent)] focus:bg-white dark:bg-white/5";
+const textareaClassName =
+  "w-full rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-4 text-sm leading-7 text-[color:var(--foreground)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-[color:var(--accent)] focus:bg-[color:var(--panel-strong)]";
 
 export function ReviewWorkbench() {
   const [messages, setMessages] = useState<ChatMessage[]>(STARTER_CHAT);
@@ -29,13 +29,14 @@ export function ReviewWorkbench() {
   const [toolTrace, setToolTrace] = useState<ToolTraceItem[]>([]);
   const [usedSources, setUsedSources] = useState<string[]>([]);
   const [disclaimer, setDisclaimer] = useState(
-    "이 서비스는 참고용 정보를 정리합니다. 실제 조치 전에는 사실관계와 최신 법령(현재 시행 규정) 여부를 다시 확인해 주세요.",
+    "이 서비스는 참고용 정보 정리 도구입니다. 실제 대응 전에는 사실관계와 최신 법령(현재 시행 규정)을 다시 확인해 주세요.",
   );
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const deferredCaseContext = useDeferredValue(caseContext);
+  const canSubmit = draftMessage.trim().length > 0 && !isPending;
 
   const caseStats = useMemo(() => {
     const lines = deferredCaseContext
@@ -49,8 +50,8 @@ export function ReviewWorkbench() {
     };
   }, [deferredCaseContext]);
 
-  const canSubmit = draftMessage.trim().length > 0 && !isPending;
   const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
+  const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
 
   function createMessage(role: ChatMessage["role"], content: string): ChatMessage {
     return {
@@ -69,7 +70,7 @@ export function ReviewWorkbench() {
     setToolTrace([]);
     setUsedSources([]);
     setDisclaimer(
-      "이 서비스는 참고용 정보를 정리합니다. 실제 조치 전에는 사실관계와 최신 법령(현재 시행 규정) 여부를 다시 확인해 주세요.",
+      "이 서비스는 참고용 정보 정리 도구입니다. 실제 대응 전에는 사실관계와 최신 법령(현재 시행 규정)을 다시 확인해 주세요.",
     );
     setFallbackReason(null);
     setErrorMessage(null);
@@ -141,256 +142,271 @@ export function ReviewWorkbench() {
   }
 
   return (
-    <main className="grain min-h-screen">
-      <section className="border-b border-[color:var(--line)]">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-8 md:px-10 lg:px-12">
-          <div className="animate-fade flex items-center justify-between gap-4 text-sm text-[color:var(--muted)]">
+    <main className="legal-shell min-h-screen bg-[color:var(--background)] text-[color:var(--foreground)]">
+      <header className="sticky top-0 z-20 border-b border-[color:var(--line)] bg-[color:var(--background)]/92 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-6 px-5 py-4 md:px-8">
+          <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <span className="rounded-full border border-[color:var(--line)] px-3 py-1">
+              <span className="rounded-full border border-[color:var(--line-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--accent)]">
                 AI Legal Desk
               </span>
-              <span>Korean Law MCP 기반 개인 법률비서 MVP</span>
+              <span className="hidden text-sm text-[color:var(--muted)] md:inline">
+                Korean Law MCP research workspace
+              </span>
             </div>
-            <span className="font-mono text-xs">Next.js + Vercel</span>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">
+              질문보다 먼저 근거를 확인하는 법률 리서치 워크스페이스
+            </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
-            <div className="animate-rise">
-              <p className="mb-4 text-sm uppercase tracking-[0.24em] text-[color:var(--accent)]">
-                Always-on legal research workspace
-              </p>
-              <h1 className="max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.05em] md:text-7xl">
-                내 상황을 이해하고, 관련 법령과 판례를 먼저 찾아주는 AI 법률비서입니다.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-[color:var(--muted)]">
-                사건 배경을 적고 질문을 던지면 답변과 함께 참고할 법령(법 조문), 판례(법원의
-                판단 사례), 해석례(행정기관 해석)를 정리해 줍니다. 복잡한 검색 대신, 지금
-                필요한 쟁점을 한 화면에서 정리하세요.
-              </p>
-            </div>
-
-            <div className="poster-shadow animate-rise delay-1 rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
-              <p className="text-sm uppercase tracking-[0.24em] text-[color:var(--muted)]">
-                Main workflow
-              </p>
-              <div className="mt-5 space-y-4">
-                {[
-                  ["1", "사건 배경 입력", "당사자, 일정, 이미 받은 통지서 내용을 먼저 적습니다."],
-                  ["2", "질문 작성", "지금 가장 급한 쟁점 하나를 자연어로 묻습니다."],
-                  ["3", "법령·판례 조회", "Korean Law MCP를 통해 관련 근거를 우선 탐색합니다."],
-                  ["4", "참고용 정리", "답변과 근거 카드를 함께 보고 다음 행동을 정리합니다."],
-                ].map(([step, title, description]) => (
-                  <div
-                    key={step}
-                    className="flex items-start gap-4 border-t border-[color:var(--line)] pt-4 first:border-t-0 first:pt-0"
-                  >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--accent-soft)] text-sm font-semibold text-[color:var(--accent)]">
-                      {step}
-                    </span>
-                    <div>
-                      <p className="font-semibold">{title}</p>
-                      <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
-                        {description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="hidden items-center gap-3 lg:flex">
+            <StatusPill label={MODE_COPY[mode].label} tone="accent" />
+            <StatusPill label={isPending ? "정리 중" : "대기 중"} tone={isPending ? "muted" : "success"} />
           </div>
         </div>
-      </section>
+      </header>
 
-      <section className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-10 md:px-10 lg:grid-cols-[0.96fr_1.04fr] lg:px-12">
-        <aside className="poster-shadow animate-rise rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
-          <div className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] pb-6">
-            <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                Case setup
-              </p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">사건 개요와 질문</h2>
+      <div className="mx-auto grid max-w-[1600px] gap-0 px-0 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
+        <aside className="border-b border-[color:var(--line)] px-5 py-6 md:px-8 lg:min-h-[calc(100vh-81px)] lg:border-r lg:border-b-0">
+          <SectionKicker label="Case Brief" />
+          <h1 className="mt-3 max-w-[14ch] text-3xl font-semibold leading-tight tracking-[-0.04em]">
+            사건을 짧게 정리하고, 지금 바로 질문하세요.
+          </h1>
+          <p className="mt-4 max-w-[28ch] text-sm leading-7 text-[color:var(--muted)]">
+            첫 화면에서 해야 할 일은 세 가지뿐입니다. 사건 배경을 적고, 질문을 고르고, 답변보다
+            먼저 근거를 확인하는 것입니다.
+          </p>
+
+          <div className="mt-8 border-t border-[color:var(--line)] pt-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
+                상담 모드
+              </h2>
+              <span className="font-mono text-xs text-[color:var(--muted)]">
+                {MODE_COPY[mode].label}
+              </span>
             </div>
-            <button
-              type="button"
-              onClick={resetWorkspace}
-              className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
-            >
-              새 상담
-            </button>
+            <div className="mt-4 space-y-2">
+              {(Object.entries(MODE_COPY) as Array<[ChatMode, (typeof MODE_COPY)[ChatMode]]>).map(
+                ([entryMode, config]) => {
+                  const active = mode === entryMode;
+                  return (
+                    <button
+                      key={entryMode}
+                      type="button"
+                      onClick={() => setMode(entryMode)}
+                      className={`w-full border-b px-0 py-3 text-left transition ${
+                        active
+                          ? "border-[color:var(--foreground)] text-[color:var(--foreground)]"
+                          : "border-[color:var(--line)] text-[color:var(--muted)] hover:border-[color:var(--accent)] hover:text-[color:var(--foreground)]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-medium">{config.label}</p>
+                        <span className="text-xs">{active ? "active" : "select"}</span>
+                      </div>
+                      <p className="mt-2 text-sm leading-6">{config.description}</p>
+                    </button>
+                  );
+                },
+              )}
+            </div>
           </div>
 
-          <div className="mt-6 space-y-6">
-            <section>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium">상담 모드</p>
-                <span className="font-mono text-xs text-[color:var(--muted)]">
-                  {MODE_COPY[mode].label}
-                </span>
-              </div>
-              <div className="mt-3 grid gap-3">
-                {(Object.entries(MODE_COPY) as Array<[ChatMode, (typeof MODE_COPY)[ChatMode]]>).map(
-                  ([entryMode, config]) => {
-                    const active = mode === entryMode;
-                    return (
-                      <button
-                        key={entryMode}
-                        type="button"
-                        onClick={() => setMode(entryMode)}
-                        className={`rounded-[1.4rem] border px-4 py-4 text-left transition ${
-                          active
-                            ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]"
-                            : "border-[color:var(--line)] bg-white/35 hover:border-[color:var(--accent)] hover:bg-white/55 dark:bg-white/5"
-                        }`}
-                      >
-                        <p className="font-semibold">{config.label}</p>
-                        <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
-                          {config.description}
-                        </p>
-                      </button>
-                    );
-                  },
-                )}
-              </div>
-            </section>
+          <div className="mt-8 border-t border-[color:var(--line)] pt-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
+                사건 개요
+              </h2>
+              <span className="font-mono text-xs text-[color:var(--muted)]">
+                {caseStats.chars.toLocaleString()} chars / {caseStats.lines.toLocaleString()} lines
+              </span>
+            </div>
+            <textarea
+              value={caseContext}
+              onChange={(event) => setCaseContext(event.target.value)}
+              className={`${textareaClassName} mt-4 min-h-[240px] resize-y`}
+              placeholder="당사자 관계, 통지 시점, 이미 받은 문서, 가장 급한 쟁점을 적어 주세요."
+            />
+          </div>
 
-            <section>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium">사건 개요</p>
-                <span className="font-mono text-xs text-[color:var(--muted)]">
-                  문자 {caseStats.chars.toLocaleString()} / 줄 {caseStats.lines.toLocaleString()}
-                </span>
-              </div>
-              <textarea
-                value={caseContext}
-                onChange={(event) => setCaseContext(event.target.value)}
-                className={`${messageInputClassName} mt-3 min-h-[210px] resize-y`}
-                placeholder="언제, 누가, 어떤 통지를 했는지 적어 주세요."
-              />
-            </section>
-
-            <section>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium">바로 써보는 질문</p>
-                <span className="text-xs text-[color:var(--muted)]">영상 메시지에 맞춘 시작 예시</span>
-              </div>
-              <div className="mt-3 grid gap-3">
-                {STARTER_PROMPTS.map((item) => (
-                  <button
-                    key={item.title}
-                    type="button"
-                    onClick={() => applyStarter(item.prompt, item.mode)}
-                    className="rounded-[1.4rem] border border-[color:var(--line)] bg-white/35 px-4 py-4 text-left transition hover:border-[color:var(--accent)] hover:bg-white/55 dark:bg-white/5"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold">{item.title}</p>
-                      <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--accent)]">
-                        {MODE_COPY[item.mode].label}
-                      </span>
+          <div className="mt-8 border-t border-[color:var(--line)] pt-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
+                시작 질문
+              </h2>
+              <button
+                type="button"
+                onClick={resetWorkspace}
+                className="text-xs font-medium text-[color:var(--muted)] transition hover:text-[color:var(--foreground)]"
+              >
+                초기화
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {STARTER_PROMPTS.map((item) => (
+                <button
+                  key={item.title}
+                  type="button"
+                  onClick={() => applyStarter(item.prompt, item.mode)}
+                  className="group block w-full border-b border-[color:var(--line)] pb-3 text-left transition hover:border-[color:var(--accent)]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium group-hover:text-[color:var(--foreground)]">{item.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{item.prompt}</p>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{item.prompt}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
+                    <span className="mt-1 text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                      {item.mode}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
 
-        <section className="animate-rise delay-1 space-y-8">
-          <div className="poster-shadow rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface-strong)] p-6 backdrop-blur md:p-8">
-            <div className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] pb-6">
-              <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                  Chat workspace
-                </p>
-                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
-                  질문과 답변
-                </h2>
-              </div>
-              <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--accent)]">
-                {isPending ? "thinking" : "ready"}
-              </span>
+        <section className="min-h-[calc(100vh-81px)] border-b border-[color:var(--line)] px-5 py-6 md:px-8 lg:border-r lg:border-b-0">
+          <div className="flex items-end justify-between gap-6 border-b border-[color:var(--line)] pb-5">
+            <div>
+              <SectionKicker label="Conversation" />
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">질문과 답변</h2>
             </div>
+            <div className="hidden text-right md:block">
+              <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">Last question</p>
+              <p className="mt-2 max-w-[34ch] text-sm leading-6 text-[color:var(--muted)]">
+                {lastUserMessage?.content ?? "아직 질문이 없습니다."}
+              </p>
+            </div>
+          </div>
 
-            <div className="mt-6 space-y-4">
-              {messages.map((message) => (
-                <article
-                  key={message.id}
-                  className={`rounded-[1.6rem] border px-5 py-4 ${
-                    message.role === "assistant"
-                      ? "border-[color:var(--line)] bg-white/40 dark:bg-white/5"
-                      : "border-[color:var(--accent)]/20 bg-[color:var(--accent-soft)]"
-                  }`}
-                >
-                  <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                    {message.role === "assistant" ? "assistant" : "user"}
+          <div className="min-h-[480px] space-y-6 py-6">
+            {messages.length === 1 ? (
+              <div className="grid gap-10 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="space-y-5">
+                  <p className="max-w-[18ch] text-4xl font-semibold leading-[1.02] tracking-[-0.05em]">
+                    지금 필요한 건 멋진 문구가 아니라, 근거가 붙은 첫 답변입니다.
                   </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{message.content}</p>
-                </article>
-              ))}
-
-              {isPending ? (
-                <div className="rounded-[1.6rem] border border-[color:var(--line)] px-5 py-6 text-sm text-[color:var(--muted)]">
-                  관련 법령과 참고 근거를 정리하고 있습니다.
+                  <p className="max-w-[40ch] text-sm leading-7 text-[color:var(--muted)]">
+                    질문을 보내면 이 영역은 바로 작업 화면이 됩니다. 답변은 짧게 시작하고,
+                    우측 인스펙터에서 법령과 판례 근거를 이어서 확인할 수 있습니다.
+                  </p>
                 </div>
-              ) : null}
-            </div>
 
-            <form onSubmit={handleSubmit} className="mt-6 border-t border-[color:var(--line)] pt-6">
-              <label className="block">
-                <span className="text-sm font-medium">질문</span>
-                <textarea
-                  value={draftMessage}
-                  onChange={(event) => setDraftMessage(event.target.value)}
-                  className={`${messageInputClassName} mt-3 min-h-[132px] resize-y`}
-                  placeholder="예: 해고 통지를 문자로만 받았는데 어떤 절차 위반이 문제될 수 있나요?"
-                />
-              </label>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm leading-6 text-[color:var(--muted)]">
-                  답변은 참고용입니다. 실제 조치 전에는 사실관계와 최신 규정 여부를 다시 확인해
-                  주세요.
-                </p>
-                <button
-                  type="submit"
-                  disabled={!canSubmit}
-                  className="rounded-full bg-[color:var(--foreground)] px-6 py-3 text-sm font-semibold text-[color:var(--background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isPending ? "정리 중..." : "질문 보내기"}
-                </button>
+                <div className="space-y-3 border-t border-[color:var(--line)] pt-4 xl:border-t-0 xl:border-l xl:pl-8 xl:pt-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
+                    Workflow
+                  </p>
+                  {[
+                    "사건 개요 입력",
+                    "질문 작성 또는 시작 질문 선택",
+                    "법령·판례·해석례 탐색",
+                    "다음 대응 포인트 정리",
+                  ].map((item, index) => (
+                    <div
+                      key={item}
+                      className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] py-3"
+                    >
+                      <p className="text-sm text-[color:var(--muted)]">{item}</p>
+                      <span className="font-mono text-xs text-[color:var(--muted)]">
+                        0{index + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </form>
+            ) : null}
 
-            {errorMessage ? (
-              <div className="mt-4 rounded-[1.5rem] border border-[color:var(--danger)]/20 bg-[color:var(--danger)]/8 px-4 py-3 text-sm text-[color:var(--danger)]">
-                {errorMessage}
+            {messages.map((message) => (
+              <article
+                key={message.id}
+                className={`max-w-[90%] ${
+                  message.role === "assistant" ? "mr-auto" : "ml-auto"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
+                    {message.role === "assistant" ? "assistant" : "user"}
+                  </span>
+                  <span className="h-px flex-1 bg-[color:var(--line)]" />
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-[15px] leading-8 text-[color:var(--foreground)]">
+                  {message.content}
+                </p>
+              </article>
+            ))}
+
+            {isPending ? (
+              <div className="border-t border-[color:var(--line)] pt-4">
+                <p className="text-sm leading-7 text-[color:var(--muted)]">
+                  관련 법령과 참고 근거를 먼저 정리하고 있습니다.
+                </p>
               </div>
             ) : null}
           </div>
 
-          <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
-            <div className="poster-shadow rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
-              <SectionHeader title="참고 근거" meta={`${citations.length} items`} />
-              <div className="mt-4 space-y-3">
+          <form onSubmit={handleSubmit} className="border-t border-[color:var(--line)] pt-6">
+            <textarea
+              value={draftMessage}
+              onChange={(event) => setDraftMessage(event.target.value)}
+              className={`${textareaClassName} min-h-[144px] resize-y`}
+              placeholder="예: 문자로 해고 통보를 받았습니다. 해고예고(미리 알리는 절차)와 서면 통지 의무 위반 가능성을 먼저 정리해 주세요."
+            />
+
+            <div className="mt-4 flex flex-col gap-4 border-t border-[color:var(--line)] pt-4 md:flex-row md:items-center md:justify-between">
+              <p className="max-w-[54ch] text-sm leading-7 text-[color:var(--muted)]">
+                답변은 참고용입니다. 실제 대응 전에는 사실관계와 최신 규정 여부를 다시 확인해
+                주세요.
+              </p>
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="inline-flex items-center justify-center rounded-full bg-[color:var(--foreground)] px-6 py-3 text-sm font-semibold text-[color:var(--background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isPending ? "정리 중..." : "질문 보내기"}
+              </button>
+            </div>
+
+            {errorMessage ? (
+              <div className="mt-4 border-t border-[color:var(--line)] pt-4 text-sm leading-7 text-[color:var(--danger)]">
+                {errorMessage}
+              </div>
+            ) : null}
+          </form>
+        </section>
+
+        <aside className="px-5 py-6 md:px-8 lg:min-h-[calc(100vh-81px)]">
+          <div className="space-y-8 lg:sticky lg:top-[97px]">
+            <section>
+              <SectionKicker label="Evidence" />
+              <div className="mt-3 flex items-end justify-between gap-4 border-b border-[color:var(--line)] pb-4">
+                <h2 className="text-2xl font-semibold tracking-[-0.04em]">근거 인스펙터</h2>
+                <span className="font-mono text-xs text-[color:var(--muted)]">
+                  {citations.length} items
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-5">
                 {citations.length > 0 ? (
                   citations.map((citation) => (
-                    <article
-                      key={`${citation.reference}-${citation.title}`}
-                      className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 dark:bg-white/5"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold">{citation.title}</p>
-                        <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--accent)]">
-                          {sourceTypeLabel(citation.sourceType)}
-                        </span>
+                    <article key={`${citation.reference}-${citation.title}`} className="border-b border-[color:var(--line)] pb-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent)]">
+                            {sourceTypeLabel(citation.sourceType)}
+                          </p>
+                          <h3 className="mt-2 text-base font-semibold">{citation.title}</h3>
+                        </div>
+                        <span className="text-[11px] text-[color:var(--muted)]">reference</span>
                       </div>
-                      <p className="mt-2 text-sm text-[color:var(--muted)]">{citation.reference}</p>
-                      <p className="mt-3 text-sm leading-6">{citation.summary}</p>
+                      <p className="mt-3 text-sm text-[color:var(--muted)]">{citation.reference}</p>
+                      <p className="mt-3 text-sm leading-7">{citation.summary}</p>
                       {citation.url ? (
                         <a
                           href={citation.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-3 inline-flex text-sm font-semibold text-[color:var(--accent)] underline-offset-4 hover:underline"
+                          className="mt-3 inline-flex text-sm font-medium text-[color:var(--accent)] underline-offset-4 hover:underline"
                         >
                           원문 링크 열기
                         </a>
@@ -398,95 +414,121 @@ export function ReviewWorkbench() {
                     </article>
                   ))
                 ) : (
-                  <EmptyPanel message="답변이 생성되면 여기에 법령·판례·해석례 근거가 정리됩니다." />
+                  <EmptyState
+                    title="근거가 여기에 쌓입니다"
+                    description="답변이 생성되면 법령(법 조문), 판례(법원의 판단 사례), 해석례(행정기관 해석)를 이 패널에서 바로 스캔할 수 있습니다."
+                  />
                 )}
               </div>
-            </div>
+            </section>
 
-            <div className="space-y-8">
-              <div className="poster-shadow rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
-                <SectionHeader title="도구 사용 흐름" meta={`${toolTrace.length} items`} />
-                <div className="mt-4 space-y-3">
-                  {toolTrace.length > 0 ? (
-                    toolTrace.map((item) => (
-                      <article
-                        key={`${item.serverLabel}-${item.toolName}-${item.detail}`}
-                        className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 dark:bg-white/5"
-                      >
+            <section>
+              <SectionKicker label="Trace" />
+              <div className="mt-3 border-t border-[color:var(--line)] pt-4">
+                {toolTrace.length > 0 ? (
+                  <div className="space-y-4">
+                    {toolTrace.map((item) => (
+                      <article key={`${item.serverLabel}-${item.toolName}-${item.detail}`} className="border-b border-[color:var(--line)] pb-4">
                         <div className="flex items-center justify-between gap-3">
-                          <p className="font-semibold">
+                          <p className="text-sm font-medium">
                             {item.serverLabel} / {item.toolName}
                           </p>
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClassName(item.status)}`}
-                          >
+                          <span className={`text-[11px] uppercase tracking-[0.18em] ${statusClassName(item.status)}`}>
                             {statusLabel(item.status)}
                           </span>
                         </div>
-                        <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
-                          {item.detail}
-                        </p>
+                        <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{item.detail}</p>
                       </article>
-                    ))
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    title="도구 흐름 없음"
+                    description="법률 조회가 필요한 질문을 보내면 MCP 도구 사용 흐름이 이 영역에 표시됩니다."
+                  />
+                )}
+              </div>
+            </section>
+
+            <section>
+              <SectionKicker label="Notes" />
+              <div className="mt-3 border-t border-[color:var(--line)] pt-4">
+                <p className="text-sm font-medium">마지막 정리</p>
+                <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
+                  {lastAssistantMessage?.content ?? "아직 답변이 없습니다."}
+                </p>
+
+                <div className="mt-5 border-t border-[color:var(--line)] pt-4">
+                  <p className="text-sm font-medium">주의 문구</p>
+                  <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">{disclaimer}</p>
+                  {fallbackReason ? (
+                    <p className="mt-3 text-sm leading-7 text-[color:var(--accent)]">{fallbackReason}</p>
+                  ) : null}
+                </div>
+
+                <div className="mt-5 border-t border-[color:var(--line)] pt-4">
+                  <p className="text-sm font-medium">출처 메모</p>
+                  {usedSources.length > 0 ? (
+                    <ul className="mt-3 space-y-2 text-sm leading-6 text-[color:var(--muted)]">
+                      {usedSources.map((source) => (
+                        <li key={source}>{source}</li>
+                      ))}
+                    </ul>
                   ) : (
-                    <EmptyPanel message="아직 실행된 MCP 도구가 없습니다. 법령 조회가 필요한 질문을 보내 보세요." />
+                    <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
+                      아직 표시할 출처 메모가 없습니다.
+                    </p>
                   )}
                 </div>
               </div>
-
-              <div className="poster-shadow rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
-                <SectionHeader title="상담 메모" meta={usedSources.length > 0 ? "source ready" : "waiting"} />
-                <div className="mt-4 space-y-4">
-                  <div className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 text-sm leading-7 dark:bg-white/5">
-                    {lastAssistantMessage?.content ??
-                      "상담이 시작되면 마지막 답변 요약이 여기에 표시됩니다."}
-                  </div>
-
-                  <div className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 text-sm leading-7 dark:bg-white/5">
-                    <p className="font-semibold">주의 문구</p>
-                    <p className="mt-2 text-[color:var(--muted)]">{disclaimer}</p>
-                    {fallbackReason ? (
-                      <p className="mt-3 text-[color:var(--accent)]">{fallbackReason}</p>
-                    ) : null}
-                  </div>
-
-                  <div className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 text-sm leading-7 dark:bg-white/5">
-                    <p className="font-semibold">사용된 출처 힌트</p>
-                    {usedSources.length > 0 ? (
-                      <ul className="mt-2 space-y-1 text-[color:var(--muted)]">
-                        {usedSources.map((source) => (
-                          <li key={source}>- {source}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-2 text-[color:var(--muted)]">
-                        아직 표시할 출처 메모가 없습니다.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            </section>
           </div>
-        </section>
-      </section>
+        </aside>
+      </div>
     </main>
   );
 }
 
-function SectionHeader({ title, meta }: { title: string; meta: string }) {
+function SectionKicker({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <span className="font-mono text-xs text-[color:var(--muted)]">{meta}</span>
-    </div>
+    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--muted)]">
+      {label}
+    </p>
   );
 }
 
-function EmptyPanel({ message }: { message: string }) {
+function StatusPill({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "accent" | "success" | "muted";
+}) {
+  const className =
+    tone === "accent"
+      ? "border-[color:var(--accent)]/30 text-[color:var(--accent)]"
+      : tone === "success"
+        ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+        : "border-[color:var(--line-strong)] text-[color:var(--muted)]";
+
   return (
-    <div className="rounded-[1.5rem] border border-dashed border-[color:var(--line)] px-4 py-8 text-sm leading-7 text-[color:var(--muted)]">
-      {message}
+    <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${className}`}>
+      {label}
+    </span>
+  );
+}
+
+function EmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="py-2">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">{description}</p>
     </div>
   );
 }
@@ -520,12 +562,12 @@ function statusLabel(status: ToolTraceItem["status"]) {
 function statusClassName(status: ToolTraceItem["status"]) {
   switch (status) {
     case "used":
-      return "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300";
+      return "text-emerald-600 dark:text-emerald-300";
     case "failed":
-      return "bg-[color:var(--danger)]/12 text-[color:var(--danger)]";
+      return "text-[color:var(--danger)]";
     case "skipped":
-      return "bg-stone-500/12 text-stone-700 dark:text-stone-300";
+      return "text-[color:var(--muted)]";
     default:
-      return "bg-stone-500/12 text-stone-700 dark:text-stone-300";
+      return "text-[color:var(--muted)]";
   }
 }
