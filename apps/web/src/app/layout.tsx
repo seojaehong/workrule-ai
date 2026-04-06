@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WorkRule AI",
-  description: "취업규칙을 구조화된 검토 결과로 변환하는 AI review harness",
+  title: "AI Legal Desk",
+  description: "Korean Law MCP 기반 개인 AI 법률비서 MVP",
 };
 
 export default function RootLayout({

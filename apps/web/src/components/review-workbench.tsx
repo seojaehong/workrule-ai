@@ -3,207 +3,135 @@
 import { FormEvent, useDeferredValue, useMemo, useState, useTransition } from "react";
 
 import {
-  DEMO_REQUEST,
-  DEMO_RESULT,
-  FOCUS_AREA_OPTIONS,
-  STANDARD_RULE_SNIPPET,
+  DEFAULT_CASE_CONTEXT,
+  MODE_COPY,
+  STARTER_CHAT,
+  STARTER_PROMPTS,
 } from "@/lib/demo-data";
 import type {
-  DraftGenerationRequest,
-  DraftGenerationResult,
-  ExtractedDocument,
-  ReviewDiagnosisRequest,
-  ReviewDiagnosisResult,
-  ReviewPriority,
+  ChatMessage,
+  ChatMode,
+  ChatRequest,
+  ChatResponse,
+  CitationCard,
+  ToolTraceItem,
 } from "@/lib/types";
 
-type WorkspaceView = "compare" | "draft" | "report";
-
-const priorityMeta: Record<
-  ReviewPriority,
-  { label: string; className: string }
-> = {
-  critical: {
-    label: "즉시 수정",
-    className: "bg-[color:var(--danger)]/10 text-[color:var(--danger)]",
-  },
-  urgent: {
-    label: "우선 반영",
-    className: "bg-[color:var(--accent)]/12 text-[color:var(--accent)]",
-  },
-  important: {
-    label: "중요 검토",
-    className: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
-  },
-  normal: {
-    label: "표현 정리",
-    className: "bg-stone-500/12 text-stone-700 dark:text-stone-300",
-  },
-  reference: {
-    label: "참고",
-    className: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
-  },
-};
-
-const menuItems: Array<{ key: WorkspaceView; label: string; description: string }> = [
-  {
-    key: "compare",
-    label: "조문 대조",
-    description: "기존 규정과 신규 기준문을 나란히 비교합니다.",
-  },
-  {
-    key: "draft",
-    label: "개정안 초안",
-    description: "비교 결과를 바탕으로 개정 취업규칙 문안을 만듭니다.",
-  },
-  {
-    key: "report",
-    label: "검토 보고",
-    description: "수정 포인트와 확인 필요 항목을 보고서처럼 정리합니다.",
-  },
-];
-
-const inputClassName =
-  "w-full rounded-[1.4rem] border border-[color:var(--line)] bg-white/55 px-4 py-3 outline-none transition placeholder:text-[color:var(--muted)]/70 focus:border-[color:var(--accent)] focus:bg-white dark:bg-white/5";
+const messageInputClassName =
+  "w-full rounded-[1.6rem] border border-[color:var(--line)] bg-white/55 px-4 py-4 outline-none transition placeholder:text-[color:var(--muted)]/70 focus:border-[color:var(--accent)] focus:bg-white dark:bg-white/5";
 
 export function ReviewWorkbench() {
-  const [form, setForm] = useState<ReviewDiagnosisRequest>(DEMO_REQUEST);
-  const [result, setResult] = useState<ReviewDiagnosisResult | null>(DEMO_RESULT);
-  const [draftResult, setDraftResult] = useState<DraftGenerationResult | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>(STARTER_CHAT);
+  const [draftMessage, setDraftMessage] = useState("");
+  const [caseContext, setCaseContext] = useState(DEFAULT_CASE_CONTEXT);
+  const [mode, setMode] = useState<ChatMode>("research");
+  const [citations, setCitations] = useState<CitationCard[]>([]);
+  const [toolTrace, setToolTrace] = useState<ToolTraceItem[]>([]);
+  const [usedSources, setUsedSources] = useState<string[]>([]);
+  const [disclaimer, setDisclaimer] = useState(
+    "이 서비스는 참고용 정보를 정리합니다. 실제 조치 전에는 사실관계와 최신 법령(현재 시행 규정) 여부를 다시 확인해 주세요.",
+  );
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [lastRunMode, setLastRunMode] = useState<"demo" | "live">("demo");
-  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("compare");
-  const [uploadingField, setUploadingField] = useState<
-    "company_rule_text" | "standard_rule_text" | null
-  >(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const deferredCurrentRule = useDeferredValue(form.company_rule_text);
-  const deferredReferenceRule = useDeferredValue(form.standard_rule_text);
+  const deferredCaseContext = useDeferredValue(caseContext);
 
-  const textStats = useMemo(() => {
-    const currentLines = deferredCurrentRule.split(/\r?\n/).filter(Boolean).length;
-    const referenceLines = deferredReferenceRule.split(/\r?\n/).filter(Boolean).length;
+  const caseStats = useMemo(() => {
+    const lines = deferredCaseContext
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean).length;
 
     return {
-      currentChars: deferredCurrentRule.length,
-      referenceChars: deferredReferenceRule.length,
-      currentLines,
-      referenceLines,
+      chars: deferredCaseContext.length,
+      lines,
     };
-  }, [deferredCurrentRule, deferredReferenceRule]);
+  }, [deferredCaseContext]);
 
-  const currentResult = result;
-  const summary = currentResult?.summary ?? null;
+  const canSubmit = draftMessage.trim().length > 0 && !isPending;
+  const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
 
-  function updateField<Key extends keyof ReviewDiagnosisRequest>(
-    key: Key,
-    value: ReviewDiagnosisRequest[Key],
-  ) {
-    setForm((current) => ({ ...current, [key]: value }));
+  function createMessage(role: ChatMessage["role"], content: string): ChatMessage {
+    return {
+      id: crypto.randomUUID(),
+      role,
+      content,
+    };
   }
 
-  function toggleFocusArea(area: string) {
-    const next = form.focus_areas.includes(area)
-      ? form.focus_areas.filter((item) => item !== area)
-      : [...form.focus_areas, area];
-    updateField("focus_areas", next);
-  }
-
-  function loadDemo() {
-    setForm(DEMO_REQUEST);
-    setResult(DEMO_RESULT);
-    setDraftResult(null);
-    setLastRunMode("demo");
-    setWorkspaceView("compare");
+  function resetWorkspace() {
+    setMessages(STARTER_CHAT);
+    setDraftMessage("");
+    setCaseContext(DEFAULT_CASE_CONTEXT);
+    setMode("research");
+    setCitations([]);
+    setToolTrace([]);
+    setUsedSources([]);
+    setDisclaimer(
+      "이 서비스는 참고용 정보를 정리합니다. 실제 조치 전에는 사실관계와 최신 법령(현재 시행 규정) 여부를 다시 확인해 주세요.",
+    );
+    setFallbackReason(null);
     setErrorMessage(null);
   }
 
-  function clearForm() {
-    setForm({
-      company_name: "",
-      company_rule_text: "",
-      standard_rule_text: STANDARD_RULE_SNIPPET,
-      industry: "",
-      employee_count: undefined,
-      focus_areas: [],
-      review_date: "",
+  function applyStarter(prompt: string, nextMode: ChatMode) {
+    setDraftMessage(prompt);
+    setMode(nextMode);
+    setErrorMessage(null);
+  }
+
+  async function sendMessage(nextMessages: ChatMessage[]) {
+    const payload: ChatRequest = {
+      messages: nextMessages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+      caseContext,
+      mode,
+    };
+
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     });
-    setResult(null);
-    setDraftResult(null);
-    setErrorMessage(null);
-    setWorkspaceView("compare");
-  }
 
-  async function generateDraft(nextResult: ReviewDiagnosisResult) {
-    setIsGeneratingDraft(true);
-
-    try {
-      const payload: DraftGenerationRequest = {
-        company_name: form.company_name,
-        baseline_rule_text: form.company_rule_text,
-        diagnosis_result: nextResult,
-      };
-
-      const response = await fetch("/api/generate-draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const payloadJson = (await response.json()) as DraftGenerationResult | { detail?: string };
-      if (!response.ok) {
-        throw new Error(
-          "detail" in payloadJson && payloadJson.detail
-            ? payloadJson.detail
-            : "개정안 초안 생성에 실패했습니다.",
-        );
-      }
-
-      setDraftResult(payloadJson as DraftGenerationResult);
-    } finally {
-      setIsGeneratingDraft(false);
+    const data = (await response.json()) as ChatResponse | { detail?: string };
+    if (!response.ok) {
+      throw new Error(
+        "detail" in data && typeof data.detail === "string"
+          ? data.detail
+          : "질의 처리 중 오류가 발생했습니다.",
+      );
     }
+
+    const chatResponse = data as ChatResponse;
+    setMessages((current) => [...current, createMessage("assistant", chatResponse.answer)]);
+    setCitations(chatResponse.citations);
+    setToolTrace(chatResponse.toolTrace);
+    setUsedSources(chatResponse.usedSources);
+    setDisclaimer(chatResponse.disclaimer);
+    setFallbackReason(chatResponse.fallbackReason ?? null);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canSubmit) {
+      return;
+    }
+
+    const nextUserMessage = createMessage("user", draftMessage.trim());
+    const nextMessages = [...messages, nextUserMessage];
+    setMessages(nextMessages);
+    setDraftMessage("");
     setErrorMessage(null);
-    setDraftResult(null);
 
     startTransition(async () => {
       try {
-        const response = await fetch("/api/diagnose", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...form,
-            industry: form.industry || null,
-            employee_count: form.employee_count || null,
-            review_date: form.review_date || null,
-          }),
-        });
-
-        const payload = (await response.json()) as ReviewDiagnosisResult | { detail?: string };
-        if (!response.ok) {
-          throw new Error(
-            "detail" in payload && payload.detail
-              ? payload.detail
-              : "대조 요청에 실패했습니다.",
-          );
-        }
-
-        const nextResult = payload as ReviewDiagnosisResult;
-        setResult(nextResult);
-        await generateDraft(nextResult);
-        setWorkspaceView("compare");
-        setLastRunMode("live");
+        await sendMessage(nextMessages);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
@@ -212,119 +140,32 @@ export function ReviewWorkbench() {
     });
   }
 
-  async function handleFileSelected(
-    field: "company_rule_text" | "standard_rule_text",
-    file: File | null,
-  ) {
-    if (!file) {
-      return;
-    }
-
-    setUploadingField(field);
-    setErrorMessage(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("/api/ingest", {
-        method: "POST",
-        body: formData,
-      });
-      const payload = (await response.json()) as ExtractedDocument | { detail?: string };
-      if (!response.ok) {
-        throw new Error(
-          "detail" in payload && payload.detail
-            ? payload.detail
-            : "문서 텍스트 추출에 실패했습니다.",
-        );
-      }
-
-      updateField(field, (payload as ExtractedDocument).normalized_text);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "문서 업로드 중 알 수 없는 오류가 발생했습니다.";
-      setErrorMessage(message);
-    } finally {
-      setUploadingField(null);
-    }
-  }
-
-  async function handleExportHwpx() {
-    if (!currentResult || !draftResult) {
-      return;
-    }
-
-    setIsExporting(true);
-    setErrorMessage(null);
-
-    try {
-      const payload: DraftGenerationRequest = {
-        company_name: form.company_name,
-        baseline_rule_text: form.company_rule_text,
-        diagnosis_result: currentResult,
-      };
-
-      const response = await fetch("/api/export-hwpx", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const maybeError = (await response.json().catch(() => null)) as { detail?: string } | null;
-        throw new Error(maybeError?.detail ?? "HWPX 내보내기에 실패했습니다.");
-      }
-
-      const blob = await response.blob();
-      const filename =
-        response.headers
-          .get("Content-Disposition")
-          ?.match(/filename\*=UTF-8''(.+)$/)?.[1]
-          ?.replaceAll("%20", " ") ?? "latest-workrule-draft.hwpx";
-
-      const href = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = href;
-      link.download = decodeURIComponent(filename);
-      link.click();
-      URL.revokeObjectURL(href);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "내보내기 중 알 수 없는 오류가 발생했습니다.";
-      setErrorMessage(message);
-    } finally {
-      setIsExporting(false);
-    }
-  }
-
   return (
     <main className="grain min-h-screen">
       <section className="border-b border-[color:var(--line)]">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-8 md:px-10 lg:px-12">
-          <div className="animate-fade flex items-center justify-between text-sm text-[color:var(--muted)]">
+          <div className="animate-fade flex items-center justify-between gap-4 text-sm text-[color:var(--muted)]">
             <div className="flex items-center gap-3">
               <span className="rounded-full border border-[color:var(--line)] px-3 py-1">
-                WorkRule AI
+                AI Legal Desk
               </span>
-              <span>취업규칙 전문 대조 및 개정안 생성</span>
+              <span>Korean Law MCP 기반 개인 법률비서 MVP</span>
             </div>
-            <span className="font-mono text-xs">Local workspace</span>
+            <span className="font-mono text-xs">Next.js + Vercel</span>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div className="animate-rise">
               <p className="mb-4 text-sm uppercase tracking-[0.24em] text-[color:var(--accent)]">
-                Compare first. Draft second.
+                Always-on legal research workspace
               </p>
-              <h1 className="max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.04em] md:text-7xl">
-                기존 취업규칙과 신규 기준문을 대조한 뒤, 바로 개정 취업규칙 초안까지 만듭니다.
+              <h1 className="max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.05em] md:text-7xl">
+                내 상황을 이해하고, 관련 법령과 판례를 먼저 찾아주는 AI 법률비서입니다.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-[color:var(--muted)]">
-                사용자는 문서 두 개만 올리면 됩니다. 시스템은 조문 매칭, 차이 탐지, 수정 포인트
-                정리, 개정 문안 생성까지 한 흐름으로 이어집니다.
+                사건 배경을 적고 질문을 던지면 답변과 함께 참고할 법령(법 조문), 판례(법원의
+                판단 사례), 해석례(행정기관 해석)를 정리해 줍니다. 복잡한 검색 대신, 지금
+                필요한 쟁점을 한 화면에서 정리하세요.
               </p>
             </div>
 
@@ -334,10 +175,10 @@ export function ReviewWorkbench() {
               </p>
               <div className="mt-5 space-y-4">
                 {[
-                  ["1", "기존 취업규칙 업로드", "현행 문서를 텍스트 또는 파일로 불러옵니다."],
-                  ["2", "신규 기준문 업로드", "신규 표준안 또는 개정 기준문을 올립니다."],
-                  ["3", "조문 매칭 대조", "누락, 변경, 충돌 조문을 먼저 정렬합니다."],
-                  ["4", "개정안 생성", "수정 문안만 모아 개정 취업규칙 초안으로 묶습니다."],
+                  ["1", "사건 배경 입력", "당사자, 일정, 이미 받은 통지서 내용을 먼저 적습니다."],
+                  ["2", "질문 작성", "지금 가장 급한 쟁점 하나를 자연어로 묻습니다."],
+                  ["3", "법령·판례 조회", "Korean Law MCP를 통해 관련 근거를 우선 탐색합니다."],
+                  ["4", "참고용 정리", "답변과 근거 카드를 함께 보고 다음 행동을 정리합니다."],
                 ].map(([step, title, description]) => (
                   <div
                     key={step}
@@ -357,480 +198,279 @@ export function ReviewWorkbench() {
               </div>
             </div>
           </div>
-
-          <nav className="animate-rise delay-2 grid gap-3 md:grid-cols-3">
-            {menuItems.map((item) => {
-              const active = workspaceView === item.key;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setWorkspaceView(item.key)}
-                  className={`rounded-[1.6rem] border px-5 py-4 text-left transition ${
-                    active
-                      ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]"
-                      : "border-[color:var(--line)] bg-white/35 hover:border-[color:var(--accent)] hover:bg-white/55 dark:bg-white/5"
-                  }`}
-                >
-                  <p className="text-base font-semibold">{item.label}</p>
-                  <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
-                    {item.description}
-                  </p>
-                </button>
-              );
-            })}
-          </nav>
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-10 md:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-12">
-        <form
-          onSubmit={handleSubmit}
-          className="poster-shadow animate-rise rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8"
-        >
-          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[color:var(--line)] pb-6">
+      <section className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-10 md:px-10 lg:grid-cols-[0.96fr_1.04fr] lg:px-12">
+        <aside className="poster-shadow animate-rise rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
+          <div className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] pb-6">
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                Compare setup
+                Case setup
               </p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
-                대조 작업 설정
-              </h2>
-            </div>
-            <div className="flex flex-wrap gap-2 text-sm">
-              <button
-                type="button"
-                onClick={loadDemo}
-                className="rounded-full border border-[color:var(--line)] px-4 py-2 transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
-              >
-                샘플 불러오기
-              </button>
-              <button
-                type="button"
-                onClick={clearForm}
-                className="rounded-full border border-[color:var(--line)] px-4 py-2 transition hover:border-[color:var(--foreground)]"
-              >
-                새 작업
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
-            <Field label="회사명">
-              <input
-                value={form.company_name}
-                onChange={(event) => updateField("company_name", event.target.value)}
-                className={inputClassName}
-                placeholder="예: 세이프워크 주식회사"
-                required
-              />
-            </Field>
-
-            <Field label="업종">
-              <input
-                value={form.industry ?? ""}
-                onChange={(event) => updateField("industry", event.target.value)}
-                className={inputClassName}
-                placeholder="예: 제조업"
-              />
-            </Field>
-
-            <Field label="상시근로자 수">
-              <input
-                type="number"
-                min={1}
-                value={form.employee_count ?? ""}
-                onChange={(event) =>
-                  updateField(
-                    "employee_count",
-                    event.target.value ? Number(event.target.value) : undefined,
-                  )
-                }
-                className={inputClassName}
-                placeholder="예: 85"
-              />
-            </Field>
-
-            <Field label="검토일">
-              <input
-                type="date"
-                value={form.review_date ?? ""}
-                onChange={(event) => updateField("review_date", event.target.value)}
-                className={inputClassName}
-              />
-            </Field>
-          </div>
-
-          <div className="mt-6">
-            <p className="text-sm font-medium">중점 검토 범위</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {FOCUS_AREA_OPTIONS.map((area) => {
-                const active = form.focus_areas.includes(area);
-                return (
-                  <button
-                    key={area}
-                    type="button"
-                    onClick={() => toggleFocusArea(area)}
-                    className={`rounded-full px-4 py-2 text-sm transition ${
-                      active
-                        ? "bg-[color:var(--accent)] text-white"
-                        : "border border-[color:var(--line)] text-[color:var(--muted)] hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
-                    }`}
-                  >
-                    {area}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-6">
-            <Field
-              label="기존 취업규칙"
-              hint={`문자 ${textStats.currentChars.toLocaleString()} / 줄 ${textStats.currentLines.toLocaleString()}`}
-            >
-              <UploadAction
-                description="현행 취업규칙 원문을 올리면 대조의 기준 A로 사용합니다."
-                isLoading={uploadingField === "company_rule_text"}
-                onSelect={(file) => handleFileSelected("company_rule_text", file)}
-              />
-              <textarea
-                value={form.company_rule_text}
-                onChange={(event) => updateField("company_rule_text", event.target.value)}
-                className={`${inputClassName} min-h-[240px] resize-y`}
-                placeholder="기존 취업규칙 본문을 붙여 넣으세요."
-                required
-              />
-            </Field>
-
-            <Field
-              label="신규 취업규칙 또는 기준문"
-              hint={`문자 ${textStats.referenceChars.toLocaleString()} / 줄 ${textStats.referenceLines.toLocaleString()}`}
-            >
-              <UploadAction
-                description="개정 표준안, 신규 취업규칙, 기준문 중 비교 기준이 되는 문서를 올립니다."
-                isLoading={uploadingField === "standard_rule_text"}
-                onSelect={(file) => handleFileSelected("standard_rule_text", file)}
-              />
-              <textarea
-                value={form.standard_rule_text}
-                onChange={(event) => updateField("standard_rule_text", event.target.value)}
-                className={`${inputClassName} min-h-[220px] resize-y`}
-                placeholder="신규 취업규칙 또는 기준 취업규칙 원문을 붙여 넣으세요."
-                required
-              />
-            </Field>
-          </div>
-
-          <div className="mt-8 grid gap-3 border-t border-[color:var(--line)] pt-6 md:grid-cols-[1fr_auto] md:items-center">
-            <div>
-              <p className="text-sm font-medium">실행 순서</p>
-              <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
-                먼저 조문 매칭 대조를 실행한 뒤, 결과 탭에서 개정안 초안을 확인하세요.
-              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">사건 개요와 질문</h2>
             </div>
             <button
-              type="submit"
-              disabled={isPending}
-              className="rounded-full bg-[color:var(--foreground)] px-6 py-3 text-sm font-semibold text-[color:var(--background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              onClick={resetWorkspace}
+              className="rounded-full border border-[color:var(--line)] px-4 py-2 text-sm transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
             >
-              {isPending ? "조문 대조 실행 중..." : "조문 매칭 대조 실행"}
+              새 상담
             </button>
           </div>
 
-          {errorMessage ? (
-            <div className="mt-4 rounded-3xl border border-[color:var(--danger)]/20 bg-[color:var(--danger)]/8 px-4 py-3 text-sm text-[color:var(--danger)]">
-              {errorMessage}
-            </div>
-          ) : null}
-        </form>
+          <div className="mt-6 space-y-6">
+            <section>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium">상담 모드</p>
+                <span className="font-mono text-xs text-[color:var(--muted)]">
+                  {MODE_COPY[mode].label}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-3">
+                {(Object.entries(MODE_COPY) as Array<[ChatMode, (typeof MODE_COPY)[ChatMode]]>).map(
+                  ([entryMode, config]) => {
+                    const active = mode === entryMode;
+                    return (
+                      <button
+                        key={entryMode}
+                        type="button"
+                        onClick={() => setMode(entryMode)}
+                        className={`rounded-[1.4rem] border px-4 py-4 text-left transition ${
+                          active
+                            ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]"
+                            : "border-[color:var(--line)] bg-white/35 hover:border-[color:var(--accent)] hover:bg-white/55 dark:bg-white/5"
+                        }`}
+                      >
+                        <p className="font-semibold">{config.label}</p>
+                        <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
+                          {config.description}
+                        </p>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            </section>
 
-        <aside className="animate-rise delay-1 lg:sticky lg:top-8 lg:self-start">
+            <section>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium">사건 개요</p>
+                <span className="font-mono text-xs text-[color:var(--muted)]">
+                  문자 {caseStats.chars.toLocaleString()} / 줄 {caseStats.lines.toLocaleString()}
+                </span>
+              </div>
+              <textarea
+                value={caseContext}
+                onChange={(event) => setCaseContext(event.target.value)}
+                className={`${messageInputClassName} mt-3 min-h-[210px] resize-y`}
+                placeholder="언제, 누가, 어떤 통지를 했는지 적어 주세요."
+              />
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium">바로 써보는 질문</p>
+                <span className="text-xs text-[color:var(--muted)]">영상 메시지에 맞춘 시작 예시</span>
+              </div>
+              <div className="mt-3 grid gap-3">
+                {STARTER_PROMPTS.map((item) => (
+                  <button
+                    key={item.title}
+                    type="button"
+                    onClick={() => applyStarter(item.prompt, item.mode)}
+                    className="rounded-[1.4rem] border border-[color:var(--line)] bg-white/35 px-4 py-4 text-left transition hover:border-[color:var(--accent)] hover:bg-white/55 dark:bg-white/5"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold">{item.title}</p>
+                      <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--accent)]">
+                        {MODE_COPY[item.mode].label}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{item.prompt}</p>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        </aside>
+
+        <section className="animate-rise delay-1 space-y-8">
           <div className="poster-shadow rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface-strong)] p-6 backdrop-blur md:p-8">
             <div className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] pb-6">
               <div>
                 <p className="text-sm uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                  Output workspace
+                  Chat workspace
                 </p>
                 <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
-                  {workspaceView === "compare"
-                    ? "조문 대조 결과"
-                    : workspaceView === "draft"
-                      ? "개정 취업규칙 초안"
-                      : "검토 보고서 뷰"}
+                  질문과 답변
                 </h2>
               </div>
               <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--accent)]">
-                {lastRunMode === "live" ? "live" : "demo"}
+                {isPending ? "thinking" : "ready"}
               </span>
             </div>
 
-            {!currentResult || !summary ? (
-              <div className="mt-6 rounded-[2rem] border border-dashed border-[color:var(--line)] px-6 py-10 text-sm leading-7 text-[color:var(--muted)]">
-                아직 비교 결과가 없습니다. 왼쪽에서 기존 취업규칙과 신규 기준문을 입력한 뒤
-                조문 매칭 대조를 실행하세요.
-              </div>
-            ) : workspaceView === "compare" ? (
-              <div className="mt-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <Metric label="총 매칭 이슈" value={`${summary.total_findings}건`} />
-                  <Metric label="비교 기준" value="기존 vs 신규" />
-                  <Metric label="즉시 수정" value={`${summary.critical_count}건`} />
-                  <Metric label="우선 반영" value={`${summary.urgent_count}건`} />
+            <div className="mt-6 space-y-4">
+              {messages.map((message) => (
+                <article
+                  key={message.id}
+                  className={`rounded-[1.6rem] border px-5 py-4 ${
+                    message.role === "assistant"
+                      ? "border-[color:var(--line)] bg-white/40 dark:bg-white/5"
+                      : "border-[color:var(--accent)]/20 bg-[color:var(--accent-soft)]"
+                  }`}
+                >
+                  <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                    {message.role === "assistant" ? "assistant" : "user"}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{message.content}</p>
+                </article>
+              ))}
+
+              {isPending ? (
+                <div className="rounded-[1.6rem] border border-[color:var(--line)] px-5 py-6 text-sm text-[color:var(--muted)]">
+                  관련 법령과 참고 근거를 정리하고 있습니다.
                 </div>
+              ) : null}
+            </div>
 
-                <section>
-                  <SectionHeader title="조문 매칭" meta={`${currentResult.clause_mappings.length} items`} />
-                  <div className="mt-3 space-y-3">
-                    {currentResult.clause_mappings.map((mapping, index) => (
-                      <article
-                        key={`${mapping.company_clause}-${index}`}
-                        className="rounded-[1.5rem] border border-[color:var(--line)] px-4 py-4"
-                      >
-                        <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                          {mapping.status}
-                        </p>
-                        <p className="mt-2 font-semibold">{mapping.company_clause}</p>
-                        <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
-                          대응 기준: {mapping.standard_clause ?? "직접 대응 조문 없음"}
-                        </p>
-                        <p className="mt-2 text-sm leading-6">{mapping.notes}</p>
-                      </article>
-                    ))}
-                  </div>
-                </section>
+            <form onSubmit={handleSubmit} className="mt-6 border-t border-[color:var(--line)] pt-6">
+              <label className="block">
+                <span className="text-sm font-medium">질문</span>
+                <textarea
+                  value={draftMessage}
+                  onChange={(event) => setDraftMessage(event.target.value)}
+                  className={`${messageInputClassName} mt-3 min-h-[132px] resize-y`}
+                  placeholder="예: 해고 통지를 문자로만 받았는데 어떤 절차 위반이 문제될 수 있나요?"
+                />
+              </label>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm leading-6 text-[color:var(--muted)]">
+                  답변은 참고용입니다. 실제 조치 전에는 사실관계와 최신 규정 여부를 다시 확인해
+                  주세요.
+                </p>
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="rounded-full bg-[color:var(--foreground)] px-6 py-3 text-sm font-semibold text-[color:var(--background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isPending ? "정리 중..." : "질문 보내기"}
+                </button>
+              </div>
+            </form>
 
-                <section>
-                  <SectionHeader
-                    title="핵심 차이"
-                    meta={`${currentResult.findings.length.toLocaleString()} items`}
-                  />
-                  <div className="mt-3 space-y-3">
-                    {currentResult.findings.map((finding) => (
+            {errorMessage ? (
+              <div className="mt-4 rounded-[1.5rem] border border-[color:var(--danger)]/20 bg-[color:var(--danger)]/8 px-4 py-3 text-sm text-[color:var(--danger)]">
+                {errorMessage}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="poster-shadow rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
+              <SectionHeader title="참고 근거" meta={`${citations.length} items`} />
+              <div className="mt-4 space-y-3">
+                {citations.length > 0 ? (
+                  citations.map((citation) => (
+                    <article
+                      key={`${citation.reference}-${citation.title}`}
+                      className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 dark:bg-white/5"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-semibold">{citation.title}</p>
+                        <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--accent)]">
+                          {sourceTypeLabel(citation.sourceType)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-[color:var(--muted)]">{citation.reference}</p>
+                      <p className="mt-3 text-sm leading-6">{citation.summary}</p>
+                      {citation.url ? (
+                        <a
+                          href={citation.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex text-sm font-semibold text-[color:var(--accent)] underline-offset-4 hover:underline"
+                        >
+                          원문 링크 열기
+                        </a>
+                      ) : null}
+                    </article>
+                  ))
+                ) : (
+                  <EmptyPanel message="답변이 생성되면 여기에 법령·판례·해석례 근거가 정리됩니다." />
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="poster-shadow rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
+                <SectionHeader title="도구 사용 흐름" meta={`${toolTrace.length} items`} />
+                <div className="mt-4 space-y-3">
+                  {toolTrace.length > 0 ? (
+                    toolTrace.map((item) => (
                       <article
-                        key={finding.finding_id}
-                        className="rounded-[1.5rem] border border-[color:var(--line)] px-4 py-4 transition hover:border-[color:var(--accent)]"
+                        key={`${item.serverLabel}-${item.toolName}-${item.detail}`}
+                        className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 dark:bg-white/5"
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="font-semibold">{finding.clause_title}</p>
+                          <p className="font-semibold">
+                            {item.serverLabel} / {item.toolName}
+                          </p>
                           <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${priorityMeta[finding.priority].className}`}
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClassName(item.status)}`}
                           >
-                            {priorityMeta[finding.priority].label}
+                            {statusLabel(item.status)}
                           </span>
                         </div>
-                        <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">
-                          {finding.reason}
+                        <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
+                          {item.detail}
                         </p>
                       </article>
-                    ))}
-                  </div>
-                </section>
-              </div>
-            ) : workspaceView === "draft" ? (
-              <div className="mt-6 space-y-6">
-                <div className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-5 py-5 dark:bg-white/5">
-                  <p className="text-sm uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                    Draft strategy
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
-                    비교 결과를 기준으로 백엔드에서 최신 취업규칙 초안을 생성했습니다. 화면 표시와
-                    HWPX 다운로드는 같은 초안 데이터를 사용합니다.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <Metric
-                    label="적용된 조문 치환"
-                    value={draftResult ? `${draftResult.applied_replacements}건` : "-"}
-                  />
-                  <Metric
-                    label="신규 삽입 조문"
-                    value={draftResult ? `${draftResult.inserted_clauses}건` : "-"}
-                  />
-                </div>
-
-                <section>
-                  <div className="flex items-center justify-between gap-3">
-                    <SectionHeader
-                      title="개정 초안 섹션"
-                      meta={draftResult ? `${draftResult.section_count} items` : "pending"}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleExportHwpx}
-                      disabled={isExporting || !draftResult}
-                      className="rounded-full border border-[color:var(--line)] px-4 py-2 text-xs font-semibold transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isExporting ? "HWPX 생성 중..." : "HWPX 다운로드"}
-                    </button>
-                  </div>
-                  {isGeneratingDraft ? (
-                    <div className="mt-3 rounded-[1.5rem] border border-[color:var(--line)] px-4 py-8 text-sm text-[color:var(--muted)]">
-                      개정 취업규칙 초안을 생성하고 있습니다.
-                    </div>
-                  ) : draftResult ? (
-                    <div className="mt-3 space-y-3">
-                      {draftResult.sections.slice(0, 8).map((section, index) => (
-                        <article
-                          key={`${section.slice(0, 40)}-${index}`}
-                          className="rounded-[1.5rem] border border-[color:var(--line)] px-4 py-4"
-                        >
-                          <p className="whitespace-pre-wrap text-sm leading-7">{section}</p>
-                        </article>
-                      ))}
-                    </div>
+                    ))
                   ) : (
-                    <div className="mt-3 rounded-[1.5rem] border border-[color:var(--line)] px-4 py-8 text-sm text-[color:var(--muted)]">
-                      아직 개정안 초안이 생성되지 않았습니다.
-                    </div>
+                    <EmptyPanel message="아직 실행된 MCP 도구가 없습니다. 법령 조회가 필요한 질문을 보내 보세요." />
                   )}
-                </section>
-
-                <section>
-                  <SectionHeader title="통합 개정안 텍스트" meta="server generated" />
-                  <textarea
-                    value={draftResult?.draft_plain_text ?? ""}
-                    readOnly
-                    className={`${inputClassName} mt-3 min-h-[260px] resize-y`}
-                  />
-                </section>
-
-                {draftResult?.unresolved_findings.length ? (
-                  <section>
-                    <SectionHeader
-                      title="추가 확인 필요"
-                      meta={`${draftResult.unresolved_findings.length} items`}
-                    />
-                    <div className="mt-3 space-y-2">
-                      {draftResult.unresolved_findings.map((item) => (
-                        <div
-                          key={item}
-                          className="rounded-3xl border border-[color:var(--line)] bg-white/30 px-4 py-3 text-sm leading-6 dark:bg-white/5"
-                        >
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-              </div>
-            ) : (
-              <div className="mt-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <Metric label="전체 이슈" value={`${summary.total_findings}건`} />
-                  <Metric label="사용자 확인" value={`${currentResult.user_confirmations.length}건`} />
-                  <Metric label="즉시 수정" value={`${summary.critical_count}건`} />
-                  <Metric label="중요 검토" value={`${summary.important_count}건`} />
                 </div>
+              </div>
 
-                <section>
-                  <SectionHeader title="주요 발견사항" meta={`${summary.top_findings.length} items`} />
-                  <div className="mt-3 space-y-2">
-                    {summary.top_findings.map((item) => (
-                      <div
-                        key={item}
-                        className="rounded-3xl border border-[color:var(--line)] bg-white/30 px-4 py-3 text-sm leading-6 dark:bg-white/5"
-                      >
-                        {item}
-                      </div>
-                    ))}
+              <div className="poster-shadow rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 backdrop-blur md:p-8">
+                <SectionHeader title="상담 메모" meta={usedSources.length > 0 ? "source ready" : "waiting"} />
+                <div className="mt-4 space-y-4">
+                  <div className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 text-sm leading-7 dark:bg-white/5">
+                    {lastAssistantMessage?.content ??
+                      "상담이 시작되면 마지막 답변 요약이 여기에 표시됩니다."}
                   </div>
-                </section>
 
-                <section>
-                  <SectionHeader
-                    title="사용자 확인 필요"
-                    meta={`${currentResult.user_confirmations.length.toLocaleString()} items`}
-                  />
-                  <div className="mt-3 space-y-3">
-                    {currentResult.user_confirmations.length > 0 ? (
-                      currentResult.user_confirmations.map((item) => (
-                        <div
-                          key={item.item_id}
-                          className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 dark:bg-white/5"
-                        >
-                          <p className="font-semibold">{item.clause_title}</p>
-                          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
-                            {item.question}
-                          </p>
-                        </div>
-                      ))
+                  <div className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 text-sm leading-7 dark:bg-white/5">
+                    <p className="font-semibold">주의 문구</p>
+                    <p className="mt-2 text-[color:var(--muted)]">{disclaimer}</p>
+                    {fallbackReason ? (
+                      <p className="mt-3 text-[color:var(--accent)]">{fallbackReason}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 text-sm leading-7 dark:bg-white/5">
+                    <p className="font-semibold">사용된 출처 힌트</p>
+                    {usedSources.length > 0 ? (
+                      <ul className="mt-2 space-y-1 text-[color:var(--muted)]">
+                        {usedSources.map((source) => (
+                          <li key={source}>- {source}</li>
+                        ))}
+                      </ul>
                     ) : (
-                      <p className="text-sm text-[color:var(--muted)]">
-                        현재 결과에는 추가 확인 항목이 없습니다.
+                      <p className="mt-2 text-[color:var(--muted)]">
+                        아직 표시할 출처 메모가 없습니다.
                       </p>
                     )}
                   </div>
-                </section>
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </aside>
+        </section>
       </section>
     </main>
-  );
-}
-
-function UploadAction({
-  description,
-  isLoading,
-  onSelect,
-}: {
-  description: string;
-  isLoading: boolean;
-  onSelect: (file: File | null) => void;
-}) {
-  return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <p className="text-xs text-[color:var(--muted)]">
-        {description}
-      </p>
-      <label className="cursor-pointer rounded-full border border-[color:var(--line)] px-3 py-2 text-xs font-semibold transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]">
-        {isLoading ? "추출 중..." : "파일 업로드"}
-        <input
-          type="file"
-          accept=".txt,.md,.docx,.pdf,.hwpx,.hwp"
-          className="hidden"
-          disabled={isLoading}
-          onChange={(event) => {
-            onSelect(event.target.files?.[0] ?? null);
-            event.currentTarget.value = "";
-          }}
-        />
-      </label>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <span className="text-sm font-medium">{label}</span>
-        {hint ? (
-          <span className="font-mono text-xs text-[color:var(--muted)]">{hint}</span>
-        ) : null}
-      </div>
-      {children}
-    </label>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[1.5rem] border border-[color:var(--line)] bg-white/30 px-4 py-4 dark:bg-white/5">
-      <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">{label}</p>
-      <p className="mt-2 text-xl font-semibold tracking-[-0.02em]">{value}</p>
-    </div>
   );
 }
 
@@ -841,4 +481,51 @@ function SectionHeader({ title, meta }: { title: string; meta: string }) {
       <span className="font-mono text-xs text-[color:var(--muted)]">{meta}</span>
     </div>
   );
+}
+
+function EmptyPanel({ message }: { message: string }) {
+  return (
+    <div className="rounded-[1.5rem] border border-dashed border-[color:var(--line)] px-4 py-8 text-sm leading-7 text-[color:var(--muted)]">
+      {message}
+    </div>
+  );
+}
+
+function sourceTypeLabel(sourceType: CitationCard["sourceType"]) {
+  switch (sourceType) {
+    case "law":
+      return "법령";
+    case "precedent":
+      return "판례";
+    case "interpretation":
+      return "해석례";
+    default:
+      return "근거";
+  }
+}
+
+function statusLabel(status: ToolTraceItem["status"]) {
+  switch (status) {
+    case "used":
+      return "used";
+    case "failed":
+      return "failed";
+    case "skipped":
+      return "skipped";
+    default:
+      return "status";
+  }
+}
+
+function statusClassName(status: ToolTraceItem["status"]) {
+  switch (status) {
+    case "used":
+      return "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300";
+    case "failed":
+      return "bg-[color:var(--danger)]/12 text-[color:var(--danger)]";
+    case "skipped":
+      return "bg-stone-500/12 text-stone-700 dark:text-stone-300";
+    default:
+      return "bg-stone-500/12 text-stone-700 dark:text-stone-300";
+  }
 }
