@@ -159,7 +159,14 @@ export function ReviewWorkbench() {
             </p>
           </div>
 
-          <div className="hidden items-center gap-3 lg:flex">
+          <div className="hidden items-center gap-6 lg:flex">
+            <nav className="flex items-center gap-4 text-xs uppercase tracking-[0.2em] text-[color:var(--muted)]">
+              <span>Brief</span>
+              <span className="h-px w-6 bg-[color:var(--line)]" />
+              <span>Chat</span>
+              <span className="h-px w-6 bg-[color:var(--line)]" />
+              <span>Evidence</span>
+            </nav>
             <StatusPill label={MODE_COPY[mode].label} tone="accent" />
             <StatusPill label={isPending ? "정리 중" : "대기 중"} tone={isPending ? "muted" : "success"} />
           </div>
@@ -231,6 +238,17 @@ export function ReviewWorkbench() {
           </div>
 
           <div className="mt-8 border-t border-[color:var(--line)] pt-6">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
+              진행 현황
+            </h2>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <CompactMetric label="질문" value={String(messages.filter((item) => item.role === "user").length)} />
+              <CompactMetric label="근거" value={String(citations.length)} />
+              <CompactMetric label="출처" value={String(usedSources.length)} />
+            </div>
+          </div>
+
+          <div className="mt-8 border-t border-[color:var(--line)] pt-6">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
                 시작 질문
@@ -271,6 +289,9 @@ export function ReviewWorkbench() {
             <div>
               <SectionKicker label="Conversation" />
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">질문과 답변</h2>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
+                답변은 짧고 명확하게, 근거는 우측 인스펙터에서 바로 확인합니다.
+              </p>
             </div>
             <div className="hidden text-right md:block">
               <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">Last question</p>
@@ -285,17 +306,23 @@ export function ReviewWorkbench() {
               <div className="grid gap-10 xl:grid-cols-[1.2fr_0.8fr]">
                 <div className="space-y-5">
                   <p className="max-w-[18ch] text-4xl font-semibold leading-[1.02] tracking-[-0.05em]">
-                    지금 필요한 건 멋진 문구가 아니라, 근거가 붙은 첫 답변입니다.
+                    첫 답변보다 먼저, 어떤 근거를 볼지 정하는 화면입니다.
                   </p>
                   <p className="max-w-[40ch] text-sm leading-7 text-[color:var(--muted)]">
-                    질문을 보내면 이 영역은 바로 작업 화면이 됩니다. 답변은 짧게 시작하고,
-                    우측 인스펙터에서 법령과 판례 근거를 이어서 확인할 수 있습니다.
+                    21st.dev의 Notion, Cursor, Minimal 방향처럼 장식을 줄이고 작업 표면을
+                    우선시했습니다. 질문을 보내면 중앙은 대화, 우측은 근거 인스펙터로 바로
+                    전환됩니다.
                   </p>
+                  <div className="grid gap-3 pt-2 md:grid-cols-3">
+                    <MiniNote title="브리프 우선" body="사건 배경을 먼저 적고" />
+                    <MiniNote title="질문 단일화" body="지금 가장 급한 쟁점만 묻고" />
+                    <MiniNote title="근거 확인" body="우측 인스펙터로 바로 검증" />
+                  </div>
                 </div>
 
                 <div className="space-y-3 border-t border-[color:var(--line)] pt-4 xl:border-t-0 xl:border-l xl:pl-8 xl:pt-0">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
-                    Workflow
+                    Workspace order
                   </p>
                   {[
                     "사건 개요 입력",
@@ -385,6 +412,10 @@ export function ReviewWorkbench() {
                   {citations.length} items
                 </span>
               </div>
+
+              <p className="mt-4 max-w-[32ch] text-sm leading-7 text-[color:var(--muted)]">
+                답변 자체보다, 어떤 근거를 확인해야 하는지 빠르게 스캔할 수 있도록 정리합니다.
+              </p>
 
               <div className="mt-5 space-y-5">
                 {citations.length > 0 ? (
@@ -515,6 +546,24 @@ function StatusPill({
     <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${className}`}>
       {label}
     </span>
+  );
+}
+
+function CompactMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-3">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">{label}</p>
+      <p className="mt-2 text-lg font-semibold tracking-[-0.03em]">{value}</p>
+    </div>
+  );
+}
+
+function MiniNote({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="border-t border-[color:var(--line)] pt-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--foreground)]">{body}</p>
+    </div>
   );
 }
 
